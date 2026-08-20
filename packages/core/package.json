@@ -23,6 +23,7 @@
     "@plink/eslint-config": "workspace:*",
     "@plink/typescript-config": "workspace:*",
     "@types/react": "^19",
+    "eslint": "^9",
     "typescript": "^5"
   }
 }

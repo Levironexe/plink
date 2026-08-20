@@ -6,8 +6,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { generatedAvatar } from "@plink/core/avatar";
-// Reuses the package client so the database path resolves the same way here
-// as it does at runtime, regardless of the cwd the seed is invoked from.
+// Reuses the package client so seeding connects exactly the way the app does.
 import { prisma } from "../src/index";
 
 const DEMO_EMAIL = "maya@plink.demo";

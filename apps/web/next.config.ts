@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     // game. Images are rendered unoptimized to avoid proxying third-party media.
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
-  serverExternalPackages: ["better-sqlite3", "@prisma/adapter-better-sqlite3"],
+  serverExternalPackages: ["pg", "@prisma/adapter-pg"],
   // Workspace packages ship TypeScript source, so Next compiles them itself.
   transpilePackages: [
     "@plink/ai",

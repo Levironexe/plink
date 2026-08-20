@@ -10,7 +10,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DATABASE_URL: "file:./dev.db"
+  # CI runs against a throwaway Postgres service container, never a hosted
+  # database — the end-to-end suite signs up real accounts as it runs.
+  DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:5432/plink_test"
   AUTH_SECRET: "ci-secret-not-used-in-production-0123456789abcdef"
   NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3100"
 
@@ -18,6 +20,22 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: plink_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 

@@ -21,9 +21,9 @@
     "clean": "rm -rf generated node_modules"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.9.1",
+    "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
-    "better-sqlite3": "^12.11.1"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@plink/core": "workspace:*",
@@ -31,6 +31,7 @@
     "@plink/typescript-config": "workspace:*",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",

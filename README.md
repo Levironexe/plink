@@ -89,7 +89,7 @@ depends on `core`, never the reverse.
 | --- | --- | --- |
 | Framework | Next.js 16 (App Router, Turbopack) | Server Components for data, Server Actions for mutations |
 | UI | React 19 + Tailwind CSS v4 | Design tokens live in `globals.css` via `@theme` |
-| Database | Prisma 7 + SQLite (driver adapter) | Zero-setup locally, one line to move to Postgres |
+| Database | Prisma 7 + Postgres (driver adapter) | Neon in development and production alike — no provider drift |
 | Auth | `jose` JWT in an HTTP-only cookie + `bcryptjs` | No third-party dependency, sessions revocable in the DB |
 | Validation | Zod | Every API route and Server Action validates its input |
 | Charts | Recharts | Entry animation disabled — it can stall and leave a chart blank |
@@ -107,7 +107,7 @@ depends on `core`, never the reverse.
 ```bash
 pnpm install
 cp apps/web/.env.example apps/web/.env.local   # then set AUTH_SECRET to a long random value
-pnpm db:migrate                                # create the SQLite database
+pnpm db:migrate                                # apply the schema to your database
 pnpm db:seed                                   # 90 days of demo analytics, products, orders
 pnpm dev
 ```
@@ -151,6 +151,10 @@ Point Stripe's webhook at `/api/stripe/webhook`. Locally:
 | `pnpm db:studio` | Prisma Studio |
 | `pnpm db:reset` | Drop and rebuild the database |
 
+> **Give `test:e2e` its own database.** The suite signs up real accounts as it runs, so
+> point `DATABASE_URL` at a throwaway Postgres — a Neon branch or a local container —
+> not the database your app is serving from. CI uses a Postgres service container.
+
 ---
 
 ## Architecture notes
@@ -188,11 +192,14 @@ Redis when running more than one instance.
 
 ## Moving to production
 
-1. **Database** — change `provider` to `postgresql` in `prisma/schema.prisma`, swap
-   `@prisma/adapter-better-sqlite3` for the Postgres adapter in `lib/prisma.ts`, and
-   point `DATABASE_URL` at your instance. No application code changes.
+1. **Database** — already Postgres. Point `DATABASE_URL` at your instance and run
+   `pnpm db:deploy`. On Neon use the **pooled** host (the one ending in `-pooler`) with
+   `sslmode=verify-full`, so serverless invocations share connections rather than
+   exhausting them. Keep the direct host in `DATABASE_URL_UNPOOLED` in case a migration
+   ever needs a session-mode connection.
 2. **Secrets** — set a real `AUTH_SECRET` (`openssl rand -base64 48`) and
-   `NEXT_PUBLIC_SITE_URL`.
+   `NEXT_PUBLIC_SITE_URL`. Without `AUTH_SECRET` the app falls back to a constant that
+   is public in this repo, so anyone could forge a session cookie — never deploy on it.
 3. **Payments** — `api/tip` and the store record orders directly. Replace those
    handlers with a Stripe Checkout session and move the order write into the webhook.
 4. **Rate limiting** — move the limiter to a shared store.

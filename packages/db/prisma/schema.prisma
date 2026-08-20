@@ -1,5 +1,5 @@
 // Plink — a link-in-bio creator platform.
-// Uses SQLite locally; swap `provider` to "postgresql" for production.
+// Postgres everywhere — Neon in development and production alike.
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {

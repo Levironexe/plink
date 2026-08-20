@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prisma Client is code-generated; linting it is noise.
+    "src/generated/**",
   ]),
 ]);
 

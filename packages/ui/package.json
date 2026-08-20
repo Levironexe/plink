@@ -1,0 +1,32 @@
+{
+  "name": "@plink/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint",
+    "clean": "rm -rf node_modules"
+  },
+  "dependencies": {
+    "@plink/core": "workspace:*",
+    "@plink/storage": "workspace:*",
+    "lucide-react": "^1.33.0"
+  },
+  "peerDependencies": {
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@plink/eslint-config": "workspace:*",
+    "@plink/typescript-config": "workspace:*",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.39.5",
+    "typescript": "^5"
+  }
+}

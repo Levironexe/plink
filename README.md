@@ -72,7 +72,7 @@ pnpm dev
 
 Open <http://localhost:3000>.
 
-**Demo account** — `maya@plink.demo` / `plinkdemo123`
+**Demo account** — `maya@plink.demo` / `plinkdemo123` (page at `/mayabuilds`)
 (the login page has a one-click "fill it in for me" button)
 
 ### Scripts

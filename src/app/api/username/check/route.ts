@@ -15,18 +15,20 @@ export async function GET(req: NextRequest) {
   if (username.length < 3) {
     return ok({ available: false, reason: "At least 3 characters" });
   }
-  if (isReservedUsername(username) || DEMO_BY_USERNAME.has(username)) {
-    return ok({ available: false, reason: "That name is reserved" });
-  }
 
+  // A real account wins over a built-in demo handle, so check the database
+  // first and only report "reserved" for names nobody has actually claimed.
   const existing = await prisma.user.findUnique({
     where: { username },
     select: { id: true },
   });
+  if (existing) {
+    return ok({ available: false, username, reason: "Already taken" });
+  }
 
-  return ok({
-    available: !existing,
-    username,
-    reason: existing ? "Already taken" : undefined,
-  });
+  if (isReservedUsername(username) || DEMO_BY_USERNAME.has(username)) {
+    return ok({ available: false, username, reason: "That name is reserved" });
+  }
+
+  return ok({ available: true, username });
 }

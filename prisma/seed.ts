@@ -43,7 +43,7 @@ async function main() {
       createdAt: accountCreatedAt,
       email: DEMO_EMAIL,
       passwordHash: await bcrypt.hash(DEMO_PASSWORD, 10),
-      username: "maya",
+      username: "mayabuilds",
       displayName: "Maya Osei",
       bio: "Product designer turned indie maker. I write about design systems, ship small tools, and answer every DM.",
       category: "Design & tech",
@@ -301,7 +301,7 @@ async function main() {
     await prisma.order.createMany({ data: part });
   }
 
-  console.log(`✓ Demo account ready — ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
+  console.log(`✓ Demo account ready — ${DEMO_EMAIL} / ${DEMO_PASSWORD} (plink.to/${user.username})`);
   console.log(`  ${pageViews.length} views · ${clickEvents.length} clicks · ${subscribers.length} subscribers · ${orders.length} orders`);
 }
 

@@ -56,7 +56,7 @@ test.describe("sign up and onboarding", () => {
   });
 
   test("rejects a handle that is already taken", async ({ page }) => {
-    await page.goto("/signup?username=maya");
+    await page.goto("/signup?username=mayabuilds");
     await expect(page.getByText("Already taken")).toBeVisible({ timeout: 10_000 });
   });
 });

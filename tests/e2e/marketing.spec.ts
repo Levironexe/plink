@@ -18,7 +18,7 @@ test.describe("marketing site", () => {
   test("username availability check responds", async ({ page }) => {
     await page.goto("/");
     const input = page.getByLabel("Choose your Plink username").first();
-    await input.fill("maya");
+    await input.fill("mayabuilds");
     await expect(page.getByText("Already taken").first()).toBeVisible({ timeout: 10_000 });
 
     await input.fill("a-name-nobody-has-taken");

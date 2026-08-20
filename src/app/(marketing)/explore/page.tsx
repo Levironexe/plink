@@ -37,7 +37,9 @@ async function loadCreators(): Promise<Card[]> {
     },
   });
 
-  const demos: Card[] = DEMO_PROFILES.map((p) => ({
+  // A real account always supersedes the static demo that shares its handle.
+  const claimed = new Set(real.map((r) => r.username));
+  const demos: Card[] = DEMO_PROFILES.filter((p) => !claimed.has(p.username)).map((p) => ({
     username: p.username,
     displayName: p.displayName,
     bio: p.bio,

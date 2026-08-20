@@ -28,16 +28,16 @@ export async function POST(req: NextRequest) {
 
   const { email, password, username, displayName } = parsed.data;
 
-  if (isReservedUsername(username) || DEMO_BY_USERNAME.has(username)) {
-    return fail("That username is reserved", 409, { field: "username" });
-  }
-
   const [emailTaken, usernameTaken] = await Promise.all([
     prisma.user.findUnique({ where: { email: email.toLowerCase() }, select: { id: true } }),
     prisma.user.findUnique({ where: { username }, select: { id: true } }),
   ]);
   if (emailTaken) return fail("An account with that email already exists", 409, { field: "email" });
   if (usernameTaken) return fail("That username is taken", 409, { field: "username" });
+
+  if (isReservedUsername(username) || DEMO_BY_USERNAME.has(username)) {
+    return fail("That username is reserved", 409, { field: "username" });
+  }
 
   const linkDefaults = BLOCK_LIBRARY.find((b) => b.type === "link")!.defaults;
 

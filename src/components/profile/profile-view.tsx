@@ -9,6 +9,7 @@ import {
 import { parseConfig, toEmbedUrl } from "@/lib/blocks";
 import { socialPlatform } from "@/lib/socials";
 import { cn, formatMoney, initialsOf, safeUrl } from "@/lib/utils";
+import { generatedAvatar } from "@/lib/avatar";
 import type { PublicBlock, PublicProfile } from "./types";
 
 type Props = {
@@ -187,29 +188,28 @@ function NameHeading({
 
 function Avatar({ profile }: { profile: PublicProfile }) {
   const { theme } = profile;
-  const radius = avatarRadius(theme.avatarShape);
+  // Without an uploaded photo we generate deterministic art rather than showing
+  // an empty circle — the same fallback the dashboard and directory use.
+  const src =
+    profile.avatarUrl ||
+    generatedAvatar(profile.username, initialsOf(profile.displayName || profile.username));
+
   return (
     <div
-      className="relative grid size-24 shrink-0 place-items-center overflow-hidden text-2xl font-bold"
+      className="relative grid size-24 shrink-0 place-items-center overflow-hidden"
       style={{
-        borderRadius: radius,
-        background: profile.avatarUrl ? undefined : rgba(theme.textColor, 0.14),
+        borderRadius: avatarRadius(theme.avatarShape),
         boxShadow: `0 0 0 3px ${rgba(theme.textColor, 0.18)}`,
-        color: theme.textColor,
       }}
     >
-      {profile.avatarUrl ? (
-        <Image
-          src={profile.avatarUrl}
-          alt={profile.displayName}
-          fill
-          sizes="96px"
-          className="object-cover"
-          unoptimized
-        />
-      ) : (
-        initialsOf(profile.displayName || profile.username)
-      )}
+      <Image
+        src={src}
+        alt={profile.displayName || profile.username}
+        fill
+        sizes="96px"
+        className="object-cover"
+        unoptimized
+      />
     </div>
   );
 }

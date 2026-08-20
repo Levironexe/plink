@@ -11,7 +11,7 @@ const PALETTES = [
   ["#f43f5e", "#fb7185", "#ffe4e6"],
   ["#7c3aed", "#22d3ee", "#0b1020"],
   ["#f59e0b", "#84cc16", "#1c1917"],
-  ["#111827", "#6b7280", "#e5e7eb"],
+  ["#0f766e", "#2dd4bf", "#ecfeff"],
 ];
 
 function hash(seed: string) {

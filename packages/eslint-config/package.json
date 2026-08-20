@@ -1,0 +1,16 @@
+{
+  "name": "@plink/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["base.mjs", "next.mjs"],
+  "exports": {
+    "./base": "./base.mjs",
+    "./next": "./next.mjs"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "eslint-config-next": "16.3.1",
+    "typescript-eslint": "^8.20.0"
+  }
+}

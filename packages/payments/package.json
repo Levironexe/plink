@@ -1,0 +1,22 @@
+{
+  "name": "@plink/payments",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint",
+    "clean": "rm -rf node_modules"
+  },
+  "dependencies": {
+    "@plink/core": "workspace:*",
+    "stripe": "^22.5.0"
+  },
+  "devDependencies": {
+    "@plink/eslint-config": "workspace:*",
+    "@plink/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

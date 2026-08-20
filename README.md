@@ -31,8 +31,11 @@ subscribers, publish a media kit, and watch the analytics fill in.
 | `/dashboard/analytics` | Views, clicks, CTR, period-over-period deltas, time series, top links, referrers, devices |
 | `/dashboard/store` | Products and orders, publish/hide, revenue |
 | `/dashboard/audience` | Subscriber list, search, growth sparkline, CSV export |
+| `/dashboard/broadcasts` | Compose and send email campaigns to your subscriber list |
+| `/dashboard/calendar` | Weekly availability and incoming bookings |
 | `/dashboard/media-kit` | Editable rate card, audience stats and brand list |
-| `/dashboard/settings` | Change handle, password, plan; delete account |
+| `/dashboard/billing` | Plan and subscription, plus payout onboarding for creator sales |
+| `/dashboard/settings` | Change handle, password, plan, custom domain, QR code; delete account |
 | `/:username` | The public page — themed, tracked, shareable |
 | `/:username/media-kit` | Public media kit (Pro) |
 
@@ -45,6 +48,41 @@ real embedded players; anything else degrades gracefully to a button.
 
 ---
 
+---
+
+## Repository layout
+
+A [Turborepo](https://turborepo.com) workspace. The app owns routing and HTTP concerns;
+everything reusable or independently testable lives in a package.
+
+```
+apps/
+  web/                     Next.js application
+    src/app/               routes — each with its own _components/ folder
+    src/components/        shared across route areas only
+    src/lib/               app glue: auth, http, rate limiting, data loaders
+packages/
+  core/                    pure domain — blocks, themes, pricing, scheduling, domains
+  db/                      Prisma schema, migrations, generated client
+  ui/                      design-system primitives (button, field, modal, toast, uploads)
+  payments/                Stripe
+  email/                   Resend
+  storage/                 Vercel Blob
+  ai/                      Vercel AI Gateway
+  eslint-config/           shared lint rules
+  typescript-config/       shared tsconfig bases
+```
+
+**Where does a component go?** If exactly one route uses it, it belongs in that route's
+`_components/` folder (the `_` prefix keeps it out of routing). If several route areas use
+it, it moves to `apps/web/src/components/`. If it is presentational and carries no product
+knowledge, it belongs in `@plink/ui`.
+
+**Dependency direction** is one-way: `app → integrations → core`. `@plink/core` depends on
+nothing in the workspace, which is what keeps it unit-testable without mocks. `@plink/ui`
+depends on `core`, never the reverse.
+
+
 ## Stack
 
 | Layer | Choice | Why |
@@ -56,7 +94,11 @@ real embedded players; anything else degrades gracefully to a button.
 | Validation | Zod | Every API route and Server Action validates its input |
 | Charts | Recharts | Entry animation disabled — it can stall and leave a chart blank |
 | Drag & drop | dnd-kit | Keyboard-accessible reordering |
-| Tests | Vitest + Playwright | 43 unit tests, 39 E2E tests across desktop and mobile |
+| Payments | Stripe (Checkout, Subscriptions, Connect) | Product sales, tips, plan billing and creator payouts |
+| Email | Resend | Verification, password reset and audience broadcasts |
+| Uploads | Vercel Blob | Avatars, banners, block images and digital product files |
+| AI | Vercel AI Gateway + AI SDK | The AI page builder and copy generation |
+| Tests | Vitest + Playwright | Unit tests across lib modules, E2E across desktop and mobile |
 
 ---
 
@@ -64,13 +106,33 @@ real embedded players; anything else degrades gracefully to a button.
 
 ```bash
 pnpm install
-cp .env.example .env          # then set AUTH_SECRET to something long and random
-pnpm db:migrate               # create the SQLite database
-pnpm db:seed                  # 90 days of demo analytics, products, orders, subscribers
+cp apps/web/.env.example apps/web/.env.local   # then set AUTH_SECRET to a long random value
+pnpm db:migrate                                # create the SQLite database
+pnpm db:seed                                   # 90 days of demo analytics, products, orders
 pnpm dev
 ```
 
+Every task runs through Turborepo from the repo root — `pnpm build`, `pnpm test`,
+`pnpm lint`, `pnpm typecheck`, `pnpm test:e2e`. Add `--filter @plink/web` (or any package
+name) to scope a task to one workspace.
+
 Open <http://localhost:3000>.
+
+### Integration keys
+
+Every third-party integration is **optional in development**. Each one checks for its key at
+call time, never at import, so the app boots and builds with all of them blank — the relevant
+surface simply renders a "not configured" state instead of erroring.
+
+| Key | Unlocks | Where to get it |
+| --- | --- | --- |
+| `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` | Product checkout, tips, plan billing, payouts | <https://dashboard.stripe.com/apikeys> |
+| `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | Email verification, password reset, broadcasts | <https://resend.com/api-keys> |
+| `BLOB_READ_WRITE_TOKEN` | Image and file uploads | Vercel dashboard → Storage |
+| `AI_GATEWAY_API_KEY` | AI page builder and copy generation | Vercel dashboard → AI Gateway |
+
+Point Stripe's webhook at `/api/stripe/webhook`. Locally:
+`stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 
 **Demo account** — `maya@plink.demo` / `plinkdemo123` (page at `/mayabuilds`)
 (the login page has a one-click "fill it in for me" button)

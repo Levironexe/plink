@@ -15,6 +15,7 @@ import { useToast } from "@plink/ui/toast";
 import { useDebouncedSave } from "@/lib/hooks";
 import { updateTheme } from "@/app/dashboard/actions";
 import { cn } from "@plink/core/utils";
+import { EffectsTab } from "./effects-tab";
 import type { EditorData } from "@plink/core/editor-types";
 import type { PublicProfile } from "@plink/core/profile-types";
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: "themes", label: "Themes" },
   { id: "background", label: "Background" },
   { id: "buttons", label: "Buttons" },
+  { id: "effects", label: "Effects" },
   { id: "text", label: "Text & avatar" },
 ] as const;
 
@@ -102,6 +104,7 @@ export function AppearanceEditor({ initial }: { initial: EditorData }) {
             {tab === "themes" && <ThemesTab theme={theme} onApply={applyPreset} />}
             {tab === "background" && <BackgroundTab theme={theme} patch={patch} />}
             {tab === "buttons" && <ButtonsTab theme={theme} patch={patch} />}
+          {tab === "effects" && <EffectsTab theme={theme} patch={patch} />}
             {tab === "text" && <TextTab theme={theme} patch={patch} isPro={isPro} />}
           </div>
         </div>

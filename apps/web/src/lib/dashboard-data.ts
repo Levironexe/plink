@@ -7,7 +7,8 @@ export function themeFromRow(row: {
   presetId: string; bgType: string; bgColor: string; bgColorTwo: string;
   bgImageUrl: string | null; bgPattern: string; textColor: string; mutedColor: string;
   accentColor: string; buttonStyle: string; buttonRadius: string; buttonColor: string;
-  buttonTextColor: string; fontFamily: string; avatarShape: string; hideBranding: boolean;
+  buttonTextColor: string; buttonEffect: string; fontFamily: string; avatarShape: string;
+  hideBranding: boolean;
 } | null): ThemeShape {
   if (!row) return DEFAULT_THEME;
   return {
@@ -24,6 +25,7 @@ export function themeFromRow(row: {
     buttonRadius: row.buttonRadius,
     buttonColor: row.buttonColor,
     buttonTextColor: row.buttonTextColor,
+    buttonEffect: row.buttonEffect,
     fontFamily: row.fontFamily,
     avatarShape: row.avatarShape,
     hideBranding: row.hideBranding,

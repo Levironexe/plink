@@ -36,6 +36,7 @@ export async function loadPublicProfile(username: string): Promise<PublicProfile
         buttonRadius: user.theme.buttonRadius,
         buttonColor: user.theme.buttonColor,
         buttonTextColor: user.theme.buttonTextColor,
+        buttonEffect: user.theme.buttonEffect,
         fontFamily: user.theme.fontFamily,
         avatarShape: user.theme.avatarShape,
         hideBranding: user.theme.hideBranding,

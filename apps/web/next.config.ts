@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     "@plink/ai",
     "@plink/core",
     "@plink/db",
+    "@plink/effects",
     "@plink/email",
     "@plink/payments",
     "@plink/storage",

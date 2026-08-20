@@ -2,7 +2,7 @@
   "name": "@plink/web",
   "version": "0.1.0",
   "private": true,
-  "description": "A link-in-bio creator platform — Next.js application.",
+  "description": "A link-in-bio creator platform \u2014 Next.js application.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -22,6 +22,7 @@
     "@plink/ai": "workspace:*",
     "@plink/core": "workspace:*",
     "@plink/db": "workspace:*",
+    "@plink/effects": "workspace:*",
     "@plink/email": "workspace:*",
     "@plink/payments": "workspace:*",
     "@plink/storage": "workspace:*",

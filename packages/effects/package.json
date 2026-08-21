@@ -1,0 +1,22 @@
+{
+  "name": "@plink/effects",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./effects.css": "./src/effects.css",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint",
+    "clean": "rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@plink/eslint-config": "workspace:*",
+    "@plink/typescript-config": "workspace:*",
+    "@types/react": "^19",
+    "eslint": "^9",
+    "typescript": "^5"
+  }
+}

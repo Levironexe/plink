@@ -27,7 +27,7 @@ subscribers, publish a media kit, and watch the analytics fill in.
 | `/signup`, `/login` | Email + password auth with live username availability |
 | `/onboarding` | Four-step guided setup with a live phone preview |
 | `/dashboard` | Block editor — drag to reorder, inline editing, live preview, per-block click counts |
-| `/dashboard/appearance` | 12 presets plus full control of background, buttons, fonts, colours, avatar shape |
+| `/dashboard/appearance` | 12 presets plus full control of background, buttons, fonts, colours, avatar shape, and 14 animated surface effects |
 | `/dashboard/analytics` | Views, clicks, CTR, period-over-period deltas, time series, top links, referrers, devices |
 | `/dashboard/store` | Products and orders, publish/hide, revenue |
 | `/dashboard/audience` | Subscriber list, search, growth sparkline, CSV export |
@@ -65,6 +65,7 @@ packages/
   core/                    pure domain — blocks, themes, pricing, scheduling, domains
   db/                      Prisma schema, migrations, generated client
   ui/                      design-system primitives (button, field, modal, toast, uploads)
+  effects/                 animated surface effects — registry, stylesheet, pointer hook
   payments/                Stripe
   email/                   Resend
   storage/                 Vercel Blob
@@ -164,6 +165,17 @@ creator page from plain data. The same component powers the public page, the edi
 live preview, the onboarding preview and the marketing mockups. Pass `preview` and it
 renders inert elements instead of anchors — an `<a>` inside an `<a>` is invalid HTML
 and breaks hydration, and only the live page is allowed to own the document's `<h1>`.
+
+**Effects are data too, and a second axis.** A surface keeps its style and radius
+and gains an effect on top, so fourteen effects multiply against five styles rather
+than adding fourteen flat options. `packages/effects` declares each one in a registry
+and implements it in a single static stylesheet written only against `--pl-*` custom
+properties, which `buttonEffectVars()` emits from the creator's palette. The
+stylesheet never learns about users and the database never learns about CSS, so
+adding the twentieth effect costs exactly what the second did: one registry entry and
+one CSS rule. Effects paint on pseudo-elements behind the content with
+`pointer-events: none`, which is what lets a beam wrap a card containing a live form.
+`prefers-reduced-motion` turns all of it off.
 
 **Themes are data, not classes.** A theme is sixteen columns on a row
 (`lib/themes.ts`). Pure functions turn that row into inline styles, so a creator can

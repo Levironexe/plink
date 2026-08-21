@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Surface effects for creator pages — see packages/effects. */
+@import "@plink/effects/effects.css";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Design tokens — see DESIGN.md.

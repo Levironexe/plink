@@ -161,16 +161,15 @@ export function PageEditor({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    setBlocks((prev) => {
-      const from = prev.findIndex((b) => b.id === active.id);
-      const to = prev.findIndex((b) => b.id === over.id);
-      if (from === -1 || to === -1) return prev;
-      const next = arrayMove(prev, from, to);
-      startTransition(async () => {
-        const res = await reorderBlocks(next.map((b) => b.id));
-        if (!res.ok) toast(res.error, "error");
-      });
-      return next;
+    const from = blocks.findIndex((b) => b.id === active.id);
+    const to = blocks.findIndex((b) => b.id === over.id);
+    if (from === -1 || to === -1) return;
+
+    const next = arrayMove(blocks, from, to);
+    setBlocks(next);
+    startTransition(async () => {
+      const res = await reorderBlocks(next.map((b) => b.id));
+      if (!res.ok) toast(res.error, "error");
     });
   }
 

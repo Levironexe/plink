@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Google_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({
+const googleSans = Google_Sans({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-google-sans",
   display: "swap",
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -53,7 +53,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${googleSans.variable} ${geistMono.variable}`}>
       <body>{children}</body>
     </html>
   );

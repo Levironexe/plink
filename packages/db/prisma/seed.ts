@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { generatedAvatar } from "@plink/core/avatar";
 // Reuses the package client so seeding connects exactly the way the app does.
 import { prisma } from "../src/index";
+import { seedSites } from "./seed-sites";
 
 const DEMO_EMAIL = "maya@plink.demo";
 const DEMO_PASSWORD = "plinkdemo123";
@@ -298,8 +299,11 @@ async function main() {
     await prisma.order.createMany({ data: part });
   }
 
+  const siteCount = await seedSites(user.id);
+
   console.log(`✓ Demo account ready — ${DEMO_EMAIL} / ${DEMO_PASSWORD} (plink.to/${user.username})`);
   console.log(`  ${pageViews.length} views · ${clickEvents.length} clicks · ${subscribers.length} subscribers · ${orders.length} orders`);
+  console.log(`  ${siteCount} demo sites in the Plink Agency workspace`);
 }
 
 main()

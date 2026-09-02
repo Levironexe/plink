@@ -1,0 +1,268 @@
+/*
+ * Plink surface effects.
+ *
+ * Every effect is written against the variable contract below and nothing else.
+ * It never learns a creator's palette, a button style or a corner radius — those
+ * arrive as custom properties, so one static stylesheet serves every page.
+ *
+ *   --pl-bg          resting surface colour
+ *   --pl-fg          content colour on that surface
+ *   --pl-accent      the theme's accent
+ *   --pl-fg-12/25/45 --pl-fg at 12% / 25% / 45% alpha
+ *   --pl-accent-30/60  --pl-accent at 30% / 60% alpha
+ *   --pl-mx, --pl-my   pointer position within the surface, in %
+ *   --pl-dx, --pl-dy   pointer offset from centre, -1..1
+ *
+ * Effects paint on ::before and ::after, which sit *behind* content and never
+ * take pointer events — so a beam can wrap a card containing a form without
+ * touching the input. Animation is limited to compositor-friendly properties.
+ */
+
+.pl-fx {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Content rides above the effect layers. */
+.pl-fx > * {
+  position: relative;
+  z-index: 1;
+}
+
+.pl-fx::before,
+.pl-fx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Animating a custom angle needs a registered property; without it the border
+   effects simply hold still instead of breaking. */
+@property --pl-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* The ring mask shared by the two border effects: paint the padding box only. */
+.pl-fx-border-beam::before,
+.pl-fx-trace::before {
+  padding: 2px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* ═══════════════════════════════════════════════════════════════ Ambient ══ */
+
+.pl-fx-shimmer::before {
+  background: linear-gradient(
+    100deg,
+    transparent 38%,
+    var(--pl-fg-25) 50%,
+    transparent 62%
+  );
+  background-size: 220% 100%;
+  animation: pl-shimmer 3.4s ease-in-out infinite;
+}
+@keyframes pl-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+.pl-fx-border-beam::before {
+  background: conic-gradient(
+    from var(--pl-angle),
+    transparent 0 60%,
+    var(--pl-accent) 78%,
+    transparent 92%
+  );
+  animation: pl-spin 4s linear infinite;
+}
+@keyframes pl-spin {
+  to { --pl-angle: 360deg; }
+}
+
+.pl-fx-glow-pulse::after {
+  animation: pl-glow 2.8s ease-in-out infinite;
+}
+@keyframes pl-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--pl-accent-30); }
+  50% { box-shadow: 0 0 20px 3px var(--pl-accent-30); }
+}
+
+.pl-fx-aurora::before {
+  background:
+    radial-gradient(60% 120% at 20% 30%, var(--pl-accent-30), transparent 62%),
+    radial-gradient(55% 110% at 80% 70%, var(--pl-fg-25), transparent 62%);
+  background-size: 180% 180%;
+  animation: pl-drift 9s ease-in-out infinite alternate;
+}
+@keyframes pl-drift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+/* `scale` rather than `transform`, so the hover translate below still applies. */
+.pl-fx-breathe {
+  animation: pl-breathe 3.8s ease-in-out infinite;
+}
+@keyframes pl-breathe {
+  0%, 100% { scale: 1; }
+  50% { scale: 1.015; }
+}
+
+/* ═════════════════════════════════════════════════════════════════ Hover ══ */
+
+.pl-fx-shine::before {
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    var(--pl-fg-25) 50%,
+    transparent 58%
+  );
+  background-size: 250% 100%;
+  background-position: 170% 0;
+  transition: background-position 0.75s ease;
+}
+.pl-fx-shine:hover::before {
+  background-position: -70% 0;
+}
+
+.pl-fx-lift {
+  transition: translate 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pl-fx-lift::after {
+  transition: box-shadow 0.25s ease;
+}
+.pl-fx-lift:hover {
+  translate: 0 -3px;
+}
+.pl-fx-lift:hover::after {
+  box-shadow: 0 16px 32px -12px var(--pl-fg-45);
+}
+
+.pl-fx-fill-sweep::before {
+  background: var(--pl-accent);
+  transform-origin: left center;
+  scale: 0 1;
+  transition: scale 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pl-fx-fill-sweep:hover::before {
+  scale: 1 1;
+}
+
+.pl-fx-underline::after {
+  inset: auto 0 0 0;
+  height: 2px;
+  border-radius: 0;
+  background: var(--pl-accent);
+  transform-origin: left center;
+  scale: 0 1;
+  transition: scale 0.3s ease;
+}
+.pl-fx-underline:hover::after {
+  scale: 1 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════ Pointer ══ */
+
+.pl-fx-spotlight::before {
+  background: radial-gradient(
+    circle 140px at var(--pl-mx, 50%) var(--pl-my, 50%),
+    var(--pl-fg-25),
+    transparent 68%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.pl-fx-spotlight:hover::before {
+  opacity: 1;
+}
+
+.pl-fx-magnetic {
+  transition: translate 0.18s ease-out;
+}
+.pl-fx-magnetic:hover {
+  translate: calc(var(--pl-dx, 0) * 4px) calc(var(--pl-dy, 0) * 4px);
+}
+
+.pl-fx-trace::before {
+  background: radial-gradient(
+    circle 110px at var(--pl-mx, 50%) var(--pl-my, 50%),
+    var(--pl-accent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.pl-fx-trace:hover::before {
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════ Bold ══ */
+
+.pl-fx-neon::after {
+  box-shadow:
+    0 0 0 1px var(--pl-accent),
+    0 0 14px var(--pl-accent-60),
+    inset 0 0 12px var(--pl-accent-30);
+  animation: pl-flicker 5s steps(1, end) infinite;
+}
+@keyframes pl-flicker {
+  0%, 42%, 46%, 62%, 66%, 100% { opacity: 1; }
+  44%, 64% { opacity: 0.55; }
+}
+
+.pl-fx-scanline::before {
+  background: linear-gradient(var(--pl-fg-25) 0 6%, transparent 6%);
+  background-size: 100% 240%;
+  background-repeat: no-repeat;
+  animation: pl-scan 3.4s linear infinite;
+}
+@keyframes pl-scan {
+  from { background-position: 0 -140%; }
+  to { background-position: 0 140%; }
+}
+
+.pl-fx-grain::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.14;
+  animation: pl-grain 0.7s steps(3, end) infinite;
+}
+@keyframes pl-grain {
+  0% { background-position: 0 0; }
+  33% { background-position: -28px 14px; }
+  66% { background-position: 18px -22px; }
+  100% { background-position: 0 0; }
+}
+
+/* ═════════════════════════════════════════════════════════ Accessibility ══ */
+
+/*
+ * Motion is decoration here — every effect has a perfectly good resting state,
+ * so honouring the preference costs the creator nothing.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .pl-fx,
+  .pl-fx::before,
+  .pl-fx::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .pl-fx-magnetic:hover,
+  .pl-fx-lift:hover {
+    translate: none !important;
+  }
+  .pl-fx-breathe {
+    scale: none !important;
+  }
+}

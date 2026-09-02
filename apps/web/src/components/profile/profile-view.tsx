@@ -9,6 +9,7 @@ import {
 import { parseConfig, toEmbedUrl } from "@plink/core/blocks";
 import { socialPlatform } from "@plink/core/socials";
 import { cn, formatMoney, initialsOf, safeUrl } from "@plink/core/utils";
+import { EffectSurface, useSurfaceEffect } from "./effect-surface";
 import { generatedAvatar } from "@plink/core/avatar";
 import { CalendarBlock } from "@/components/profile/calendar-block";
 import type { PublicBlock, PublicProfile } from "@plink/core/profile-types";
@@ -26,7 +27,7 @@ type Props = {
  * and an <a> inside an <a> is invalid HTML that breaks hydration.
  */
 function Tappable({
-  preview, href, className, style, onClick, children, ariaLabel,
+  preview, href, className, style, onClick, children, ariaLabel, elementRef,
 }: {
   preview: boolean;
   href: string;
@@ -35,16 +36,18 @@ function Tappable({
   onClick?: () => void;
   children: React.ReactNode;
   ariaLabel?: string;
+  elementRef?: React.Ref<HTMLAnchorElement & HTMLDivElement>;
 }) {
   if (preview) {
     return (
-      <div className={className} style={style} aria-label={ariaLabel}>
+      <div ref={elementRef} className={className} style={style} aria-label={ariaLabel}>
         {children}
       </div>
     );
   }
   return (
     <a
+      ref={elementRef}
       href={href}
       target="_blank"
       rel="noopener noreferrer"
@@ -386,7 +389,7 @@ function BlockRenderer({
     }
 
     case "faq":
-      return <Faq block={block} theme={theme} />;
+      return <Faq block={block} theme={theme} preview={preview} />;
 
     case "calendar":
       return <CalendarBlock block={block} profile={profile} preview={preview} onTrack={onTrack} />;
@@ -405,18 +408,26 @@ function LinkButton({
   onTrack: (id: string) => void;
 }) {
   const style = buttonCss(theme);
+  const {
+    ref: effectRef,
+    className: effectClassName,
+    style: effectStyle,
+  } = useSurfaceEffect<HTMLAnchorElement & HTMLDivElement>(theme, preview);
   return (
     <Tappable
       preview={preview}
+      elementRef={effectRef}
       href={safeUrl(block.url)}
       onClick={() => onTrack(block.id)}
       className={cn(
+        effectClassName,
         "group relative flex w-full items-center gap-3 px-4 py-4 text-center font-semibold transition-all duration-200",
         preview ? "cursor-default" : "hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0",
         block.highlight && "animate-[pop_0.4s_ease-out]",
       )}
       style={{
         ...style,
+        ...effectStyle,
         ...(block.highlight ? { boxShadow: `0 0 0 2px ${theme.accentColor}, ${String(style.boxShadow ?? "")}`.replace(/,\s*$/, "") } : null),
       }}
     >
@@ -463,7 +474,7 @@ function EmailCapture({
   }
 
   return (
-    <div className="w-full p-4" style={{ ...buttonCss(theme), textAlign: "left" }}>
+    <EffectSurface theme={theme} preview={preview} className="w-full p-4" style={{ ...buttonCss(theme), textAlign: "left" }}>
       <p className="text-[15px] font-bold">{block.title}</p>
       {block.subtitle && <p className="mt-0.5 text-[13px] opacity-75">{block.subtitle}</p>}
       {state === "done" ? (
@@ -501,7 +512,7 @@ function EmailCapture({
           Something went wrong. Try again.
         </p>
       )}
-    </div>
+    </EffectSurface>
   );
 }
 
@@ -540,7 +551,7 @@ function ProductCard({
   }
 
   return (
-    <div className="w-full" style={{ ...buttonCss(theme), textAlign: "left" }}>
+    <EffectSurface theme={theme} preview={preview} className="w-full" style={{ ...buttonCss(theme), textAlign: "left" }}>
       <button
         type="button"
         onClick={buy}
@@ -580,7 +591,7 @@ function ProductCard({
           {error}
         </p>
       )}
-    </div>
+    </EffectSurface>
   );
 }
 
@@ -623,7 +634,7 @@ function TipJar({
   }
 
   return (
-    <div className="w-full p-4" style={{ ...buttonCss(theme), textAlign: "left" }}>
+    <EffectSurface theme={theme} preview={preview} className="w-full p-4" style={{ ...buttonCss(theme), textAlign: "left" }}>
       <p className="flex items-center gap-2 text-[15px] font-bold">
         <Coffee className="size-4" aria-hidden />
         {block.title}
@@ -669,18 +680,18 @@ function TipJar({
           )}
         </>
       )}
-    </div>
+    </EffectSurface>
   );
 }
 
-function Faq({ block, theme }: { block: PublicBlock; theme: PublicProfile["theme"] }) {
+function Faq({ block, theme, preview }: { block: PublicBlock; theme: PublicProfile["theme"]; preview: boolean }) {
   const cfg = parseConfig<{ items?: { q: string; a: string }[] }>(block.config);
   const items = cfg.items ?? [];
   const [open, setOpen] = React.useState<number | null>(0);
   if (items.length === 0) return null;
 
   return (
-    <div className="w-full overflow-hidden" style={{ ...buttonCss(theme), textAlign: "left" }}>
+    <EffectSurface theme={theme} preview={preview} className="w-full overflow-hidden" style={{ ...buttonCss(theme), textAlign: "left" }}>
       {block.title && <p className="px-4 pt-4 text-[15px] font-bold">{block.title}</p>}
       <div className="divide-y" style={{ borderColor: rgba(theme.textColor, 0.14) }}>
         {items.map((item, i) => (
@@ -700,6 +711,6 @@ function Faq({ block, theme }: { block: PublicBlock; theme: PublicProfile["theme
           </div>
         ))}
       </div>
-    </div>
+    </EffectSurface>
   );
 }

@@ -38,6 +38,9 @@ importers:
       '@plink/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@plink/effects':
+        specifier: workspace:*
+        version: link:../../packages/effects
       '@plink/email':
         specifier: workspace:*
         version: link:../../packages/email
@@ -234,6 +237,24 @@ importers:
       tsx:
         specifier: ^4.23.12
         version: 4.23.12
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/effects:
+    devDependencies:
+      '@plink/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@plink/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/react':
+        specifier: ^19
+        version: 19.2.18
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)
       typescript:
         specifier: ^5
         version: 5.9.3

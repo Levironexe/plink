@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CalendarDays, Check, ChevronRight, LoaderCircle } from "lucide-react";
 import { buttonCss, radiusCss, rgba } from "@plink/core/themes";
+import { EffectSurface } from "./effect-surface";
 import { parseConfig } from "@plink/core/blocks";
 import { upcomingDateKeys } from "@plink/core/scheduling";
 import { safeUrl } from "@plink/core/utils";
@@ -189,7 +190,7 @@ export function CalendarBlock({ block, profile, preview = false, onTrack }: Prop
   /* Success state — the widget's whole job is done. */
   if (state === "done" && confirmed) {
     return (
-      <div className="w-full p-4" style={{ ...surface, textAlign: "left" }}>
+      <EffectSurface theme={theme} className="w-full p-4" style={{ ...surface, textAlign: "left" }}>
         <p className="flex items-center gap-2 text-[15px] font-bold">
           <Check className="size-4" aria-hidden />
           You’re booked
@@ -198,12 +199,12 @@ export function CalendarBlock({ block, profile, preview = false, onTrack }: Prop
         <p className="mt-1 text-[12.5px] opacity-60">
           A copy is on its way to {email}. Times shown in {confirmed.timezone}.
         </p>
-      </div>
+      </EffectSurface>
     );
   }
 
   return (
-    <div className="w-full p-4" style={{ ...surface, textAlign: "left" }}>
+    <EffectSurface theme={theme} className="w-full p-4" style={{ ...surface, textAlign: "left" }}>
       <p className="flex items-center gap-2 text-[15px] font-bold">
         <CalendarDays className="size-4 shrink-0" aria-hidden />
         {block.title || "Book a time"}
@@ -336,7 +337,7 @@ export function CalendarBlock({ block, profile, preview = false, onTrack }: Prop
           )}
         </>
       )}
-    </div>
+    </EffectSurface>
   );
 }
 

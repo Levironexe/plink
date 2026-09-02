@@ -12,16 +12,21 @@ export type ThemeShape = {
   buttonRadius: string;
   buttonColor: string;
   buttonTextColor: string;
+  /** Effect id from @plink/effects. "none" is the resting look. */
+  buttonEffect: string;
   fontFamily: string;
   avatarShape: string;
   hideBranding: boolean;
 };
 
+/** A preset may name a signature effect; leaving it out means no effect. */
 export type ThemePreset = {
   id: string;
   name: string;
   group: "Signature" | "Minimal" | "Bold" | "Soft" | "Dark";
-  values: Omit<ThemeShape, "presetId" | "hideBranding">;
+  values: Omit<ThemeShape, "presetId" | "hideBranding" | "buttonEffect"> & {
+    buttonEffect?: string;
+  };
 };
 
 const base = {
@@ -36,6 +41,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Moonlight",
     group: "Signature",
     values: {
+      buttonEffect: "glow-pulse",
       ...base,
       bgType: "gradient",
       bgColor: "#1b1032",
@@ -74,6 +80,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Bubblegum",
     group: "Signature",
     values: {
+      buttonEffect: "breathe",
       ...base,
       bgType: "gradient",
       bgColor: "#ffe0f0",
@@ -171,6 +178,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Neon",
     group: "Dark",
     values: {
+      buttonEffect: "neon",
       ...base,
       bgType: "gradient",
       bgColor: "#06060f",
@@ -190,6 +198,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Citrus",
     group: "Bold",
     values: {
+      buttonEffect: "lift",
       ...base,
       bgType: "solid",
       bgColor: "#c6ff4a",
@@ -210,6 +219,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Cobalt",
     group: "Bold",
     values: {
+      buttonEffect: "shimmer",
       ...base,
       bgType: "gradient",
       bgColor: "#2743ff",
@@ -268,6 +278,9 @@ export const DEFAULT_THEME: ThemeShape = {
   presetId: "moonlight",
   hideBranding: false,
   ...THEME_PRESETS[0].values,
+  // Last word, so a preset's signature effect never leaks into the fallback a
+  // user gets before they have a Theme row. Mirrors the column default.
+  buttonEffect: "none",
 };
 
 export const FONT_OPTIONS = [
@@ -408,6 +421,30 @@ export function buttonCss(theme: ThemeShape): React.CSSProperties {
   }
 }
 
+/**
+ * The variable contract consumed by @plink/effects.
+ *
+ * Effects are static CSS that must work for any creator, so the palette reaches
+ * them as custom properties rather than being compiled per user. Alpha variants
+ * are precomputed here instead of with color-mix() so the stylesheet needs no
+ * colour maths and no recent-browser fallback.
+ */
+export function buttonEffectVars(theme: ThemeShape): React.CSSProperties {
+  // Outline and glass buttons are see-through, so their effective content
+  // colour is the one that actually reads against the page behind them.
+  const foreground = theme.buttonTextColor;
+  return {
+    "--pl-bg": theme.buttonColor,
+    "--pl-fg": foreground,
+    "--pl-accent": theme.accentColor,
+    "--pl-fg-12": rgba(foreground, 0.12),
+    "--pl-fg-25": rgba(foreground, 0.25),
+    "--pl-fg-45": rgba(foreground, 0.45),
+    "--pl-accent-30": rgba(theme.accentColor, 0.3),
+    "--pl-accent-60": rgba(theme.accentColor, 0.6),
+  } as React.CSSProperties;
+}
+
 export function avatarRadius(shape: string) {
   if (shape === "square") return "0px";
   if (shape === "rounded") return "22px";
@@ -415,5 +452,10 @@ export function avatarRadius(shape: string) {
 }
 
 export function presetToTheme(preset: ThemePreset, hideBranding = false): ThemeShape {
-  return { presetId: preset.id, hideBranding, ...preset.values };
+  return {
+    presetId: preset.id,
+    hideBranding,
+    buttonEffect: "none",
+    ...preset.values,
+  };
 }

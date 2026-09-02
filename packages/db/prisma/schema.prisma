@@ -59,6 +59,7 @@ model User {
   bookings      Booking[]
   availability  Availability[]
   invoices      Invoice[]
+  workspaces    Workspace[]
 }
 
 model Session {
@@ -123,6 +124,7 @@ model Block {
   visible   Boolean  @default(true)
   highlight Boolean  @default(false)
   clicks    Int      @default(0)
+  effects   String   @default("{}") // JSON EffectAssignment — per-element effects (core/site-schema)
 
   /// Scheduling — block is hidden outside this window when set.
   startsAt  DateTime?
@@ -318,4 +320,125 @@ model MediaKit {
   published   Boolean @default(false)
 
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Creator Website OS — agency-first layer (Product Plan VI).
+   Site content is a versioned JSON document validated by
+   @plink/core/site-schema; these models store, snapshot and audit it.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+model Workspace {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sites Site[]
+
+  @@index([ownerId])
+}
+
+model Site {
+  id                 String  @id @default(cuid())
+  workspaceId        String
+  name               String
+  slug               String  @unique
+  template           String  @default("editorial") // editorial | storefront | portfolio
+  status             String  @default("draft") // draft | published
+  document           String  @default("{}") // working-draft SiteDocument JSON
+  publishedVersionId String? @unique
+  clientName         String  @default("")
+  clientEmail        String  @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions    SiteVersion[]
+  brief       Brief?
+  generations AiGeneration[]
+
+  @@index([workspaceId])
+}
+
+model SiteVersion {
+  id          String   @id @default(cuid())
+  siteId      String
+  number      Int // monotonic per site
+  document    String // frozen SiteDocument snapshot
+  note        String   @default("")
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, number])
+}
+
+model Brief {
+  id        String   @id @default(cuid())
+  siteId    String   @unique
+  data      String   @default("{}") // BriefData JSON (core/site-schema)
+  status    String   @default("draft") // draft | submitted | generated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  userId    String
+  siteId    String?
+  kind      String   @default("upload") // upload | ai
+  url       String
+  mimeType  String   @default("")
+  prompt    String   @default("") // for AI-generated assets
+  meta      String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([siteId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  siteId    String?
+  action    String // e.g. site.publish, site.rollback, brief.submit
+  before    String   @default("")
+  after     String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([siteId, createdAt])
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  siteId    String?
+  type      String // publish | rollback | ai_proposal_kept | ai_proposal_edited | ai_proposal_discarded | ...
+  data      String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([siteId, type, createdAt])
+}
+
+model AiGeneration {
+  id           String   @id @default(cuid())
+  userId       String
+  siteId       String?
+  kind         String // site | bio | asset
+  prompt       String
+  output       String
+  finalApplied String   @default("") // what a human actually applied after edits
+  status       String   @default("proposed") // proposed | applied | discarded
+  createdAt    DateTime @default(now())
+
+  site Site? @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([siteId, createdAt])
 }

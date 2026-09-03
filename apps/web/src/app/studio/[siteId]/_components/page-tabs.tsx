@@ -12,7 +12,7 @@ import {
   PAGE_KIND_LABELS,
 } from "./editor-chrome";
 import { EffectsButton } from "./effects-button";
-import { LIMITS } from "../_lib/document-ops";
+import { LIMITS, normalizePagePath } from "../_lib/document-ops";
 
 /**
  * The page strip: one tab per page of the document plus the settings for
@@ -94,13 +94,13 @@ export function PageTabs({
           />
         </div>
         <div className="min-w-[10rem] flex-1">
-          <TextField
-            label="Path"
+          <PathField
+            // Remounting whenever the committed path changes is how the field
+            // picks up a de-duplicated value (`/shop` → `/shop-2`) without an
+            // effect syncing state that React would rather derive.
+            key={`${active.id}:${active.path}`}
             value={active.path}
-            onChange={(e) => onUpdate({ path: e.target.value })}
-            maxLength={120}
-            placeholder="/shop"
-            hint="Lowercase, slash-rooted. Kept unique automatically."
+            onCommit={(path) => onUpdate({ path })}
           />
         </div>
         <div className="flex items-center gap-2 pb-0.5">
@@ -131,5 +131,42 @@ export function PageTabs({
         onPick={onAdd}
       />
     </div>
+  );
+}
+
+/**
+ * The path field types freely and commits on blur or Enter.
+ *
+ * Normalising on every keystroke would fight the typist: a space folds to a
+ * hyphen and a trailing hyphen is stripped, so "fall drop" would lose its
+ * separator the moment the space was typed. Holding a local draft and folding
+ * once, when the operator is done, keeps both the typing and the guarantee that
+ * what reaches the document is a path the schema accepts.
+ */
+function PathField({ value, onCommit }: { value: string; onCommit: (path: string) => void }) {
+  const [draft, setDraft] = React.useState(value);
+
+  function commit() {
+    const next = normalizePagePath(draft);
+    setDraft(next);
+    if (next !== value) onCommit(next);
+  }
+
+  return (
+    <TextField
+      label="Path"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+      maxLength={120}
+      placeholder="/shop"
+      hint="Lowercase, slash-rooted. Tidied and kept unique when you finish."
+    />
   );
 }

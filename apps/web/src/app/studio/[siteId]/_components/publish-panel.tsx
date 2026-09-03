@@ -27,10 +27,13 @@ export function PublishPanel({
   siteId,
   initialVersions,
   beforePublish,
+  historyOnly,
 }: {
   siteId: string;
   initialVersions: VersionRow[];
   beforePublish?: () => Promise<void> | void;
+  /** Drops the Publish control — the draft recovery card has nothing valid to publish. */
+  historyOnly?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -96,10 +99,12 @@ export function PublishPanel({
         {rows.length > 0 && <span className="text-ink-muted">{rows.length}</span>}
       </Button>
 
-      <Button size="md" onClick={() => setPublishing(true)}>
-        <Rocket className="size-4" aria-hidden />
-        Publish
-      </Button>
+      {!historyOnly && (
+        <Button size="md" onClick={() => setPublishing(true)}>
+          <Rocket className="size-4" aria-hidden />
+          Publish
+        </Button>
+      )}
 
       <Modal
         open={publishing}

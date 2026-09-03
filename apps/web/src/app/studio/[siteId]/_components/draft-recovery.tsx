@@ -41,7 +41,7 @@ export function DraftRecovery({
             </p>
           )}
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <PublishPanel siteId={siteId} initialVersions={versions} />
+            <PublishPanel siteId={siteId} initialVersions={versions} historyOnly />
           </div>
         </div>
       </div>

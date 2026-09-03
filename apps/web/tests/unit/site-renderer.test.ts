@@ -14,7 +14,9 @@ import {
   siteButtonCss,
   siteDescription,
   siteFontStack,
+  siteName,
   siteThemeVars,
+  splitHero,
 } from "@/components/site/site-model";
 
 /** A three-page document shaped like the seeded demo sites. */
@@ -192,5 +194,31 @@ describe("siteDescription", () => {
 
   it("returns empty when no hero block carries a subtitle", () => {
     expect(siteDescription(emptySiteDocument("portfolio"))).toBe("");
+  });
+});
+
+describe("siteName", () => {
+  it("reads the root page's hero header title as the brand", () => {
+    expect(siteName(demoDoc())).toBe("Linh Florals");
+  });
+
+  it("falls back to the root page title when no hero header exists", () => {
+    expect(siteName(emptySiteDocument("editorial"))).toBe("Home");
+  });
+});
+
+describe("splitHero", () => {
+  it("separates the first hero section from the rest, preserving order", () => {
+    const page = demoDoc().pages[0];
+    const { hero, rest } = splitHero(page);
+    expect(hero?.kind).toBe("hero");
+    expect(rest.map((s) => s.kind)).toEqual(["links"]);
+  });
+
+  it("returns a null hero for pages without one", () => {
+    const page = demoDoc().pages[1];
+    const { hero, rest } = splitHero(page);
+    expect(hero).toBeNull();
+    expect(rest).toEqual(page.sections);
   });
 });

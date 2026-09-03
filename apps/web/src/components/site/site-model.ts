@@ -14,11 +14,15 @@ import {
   type EffectAssignment,
   type SiteDocument,
   type SitePage,
+  type SiteSection,
   type SiteTemplateId,
   type SiteTheme,
 } from "@plink/core/site-schema";
 import { radiusCss, rgba } from "@plink/core/themes";
 import { effectClass } from "@plink/effects/registry";
+
+/** Preview renders identically but never records analytics or navigates. */
+export type SiteRenderMode = "live" | "preview";
 
 /* ------------------------------------------------------------ templates */
 
@@ -100,6 +104,18 @@ export function buildSiteNav(
     };
   });
 }
+
+/**
+ * The one contract every template implements: same document in, structurally
+ * distinct layout out. `page` is already resolved and `nav` already built so a
+ * template contains zero routing logic.
+ */
+export type SiteTemplateProps = {
+  document: SiteDocument;
+  page: SitePage;
+  nav: SiteNavItem[];
+  mode: SiteRenderMode;
+};
 
 /* ----------------------------------------------------------------- theme */
 
@@ -233,4 +249,33 @@ export function siteDescription(document: SiteDocument): string {
     }
   }
   return "";
+}
+
+/**
+ * The brand a template puts in its masthead / top bar / sidebar. The document
+ * has no name field of its own — the generator writes the business name into
+ * the root page's hero header — so that block is the source of truth, with the
+ * root page title as the fallback for hand-rolled documents.
+ */
+export function siteName(document: SiteDocument): string {
+  const root = document.pages[0];
+  for (const section of root.sections) {
+    if (section.kind !== "hero") continue;
+    for (const block of section.blocks) {
+      if (block.type === "header" && block.title) return block.title;
+    }
+  }
+  return root.title;
+}
+
+/* -------------------------------------------------------------- sections */
+
+/**
+ * Templates give the first hero section a bespoke treatment (masthead display
+ * type, banner panel, oversized headline) and render everything else through
+ * their regular section rhythm — this is that split.
+ */
+export function splitHero(page: SitePage): { hero: SiteSection | null; rest: SiteSection[] } {
+  const hero = page.sections.find((section) => section.kind === "hero") ?? null;
+  return { hero, rest: page.sections.filter((section) => section !== hero) };
 }

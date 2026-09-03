@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  EFFECTS, EFFECT_GROUPS, EFFECT_NONE, effectById, effectClass,
-  effectNeedsPointer, effectsInGroup,
+  EFFECTS, EFFECT_GROUPS, EFFECT_NONE, applyEffects, effectById, effectClass,
+  effectNeedsPointer, effectsForTarget, effectsInGroup,
 } from "@plink/effects/registry";
+import { EFFECT_TARGETS } from "@plink/core/site-schema";
 import { DEFAULT_THEME, buttonEffectVars, presetToTheme, THEME_PRESETS } from "@plink/core/themes";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -22,10 +23,16 @@ describe("effect registry", () => {
   });
 
   it("gives every effect a name, a description and a known group", () => {
+    // EFFECT_GROUPS deliberately stays the four legacy surface groups; the
+    // new targets carry their own group labels outside that list.
+    const knownGroups = [...EFFECT_GROUPS, "Text", "Background", "Entrance"];
     for (const effect of EFFECTS) {
       expect(effect.name.length, effect.id).toBeGreaterThan(0);
       expect(effect.description.length, effect.id).toBeGreaterThan(0);
-      expect(EFFECT_GROUPS, effect.id).toContain(effect.group);
+      expect(knownGroups, effect.id).toContain(effect.group);
+      if (effect.target === "surface") {
+        expect(EFFECT_GROUPS, effect.id).toContain(effect.group);
+      }
     }
   });
 
@@ -43,10 +50,140 @@ describe("effect registry", () => {
     }
   });
 
-  it("lists every effect in exactly one group", () => {
+  it("lists every surface effect in exactly one legacy group", () => {
     const grouped = EFFECT_GROUPS.flatMap((g) => effectsInGroup(g)).map((e) => e.id);
-    const expected = EFFECTS.filter((e) => e.id !== EFFECT_NONE).map((e) => e.id);
+    const expected = EFFECTS
+      .filter((e) => e.target === "surface" && e.id !== EFFECT_NONE)
+      .map((e) => e.id);
     expect(grouped.sort()).toEqual(expected.sort());
+  });
+});
+
+describe("effect targets", () => {
+  const SURFACE_IDS = [
+    "shimmer", "border-beam", "glow-pulse", "aurora", "breathe",
+    "shine", "lift", "fill-sweep", "underline",
+    "spotlight", "magnetic", "trace",
+    "neon", "scanline", "grain",
+  ];
+  const TEXT_IDS = [
+    "text-gradient", "text-shimmer", "text-typewriter", "text-blur-reveal",
+    "text-wave", "text-glitch", "text-highlight",
+  ];
+  const BACKGROUND_IDS = [
+    "bg-aurora", "bg-beams", "bg-dot-grid", "bg-grid",
+    "bg-mesh-drift", "bg-noise", "bg-gradient-flow",
+  ];
+  const ENTRANCE_IDS = [
+    "enter-fade-up", "enter-fade-in", "enter-zoom", "enter-blur",
+    "enter-slide-left", "enter-slide-right", "enter-stagger",
+  ];
+
+  it("gives every effect a known target", () => {
+    for (const effect of EFFECTS) {
+      expect(EFFECT_TARGETS, effect.id).toContain(effect.target);
+    }
+  });
+
+  it("keeps none a surface effect so legacy fallbacks stay intact", () => {
+    expect(effectById(EFFECT_NONE).target).toBe("surface");
+  });
+
+  it("ships the exact contract ids per target", () => {
+    expect(effectsForTarget("surface").map((e) => e.id).sort()).toEqual([...SURFACE_IDS].sort());
+    expect(effectsForTarget("text").map((e) => e.id)).toEqual(TEXT_IDS);
+    expect(effectsForTarget("background").map((e) => e.id)).toEqual(BACKGROUND_IDS);
+    expect(effectsForTarget("entrance").map((e) => e.id)).toEqual(ENTRANCE_IDS);
+  });
+
+  it("partitions every effect except none across the four targets", () => {
+    const partitioned = EFFECT_TARGETS.flatMap((t) => effectsForTarget(t)).map((e) => e.id);
+    const expected = EFFECTS.filter((e) => e.id !== EFFECT_NONE).map((e) => e.id);
+    expect(partitioned.sort()).toEqual(expected.sort());
+    expect(new Set(partitioned).size).toBe(partitioned.length);
+  });
+
+  it("never lists none for any target", () => {
+    for (const target of EFFECT_TARGETS) {
+      expect(effectsForTarget(target).map((e) => e.id)).not.toContain(EFFECT_NONE);
+    }
+  });
+
+  it("names classes after ids, pl-fx-<id>, for every new-target effect", () => {
+    for (const target of ["text", "background", "entrance"] as const) {
+      for (const effect of effectsForTarget(target)) {
+        expect(effect.className).toBe(`pl-fx-${effect.id}`);
+      }
+    }
+  });
+
+  it("keeps the pointer hook a surface-only seam", () => {
+    for (const effect of EFFECTS) {
+      if (effect.target === "surface") continue;
+      expect(effect.needsPointer, effect.id).toBe(false);
+    }
+  });
+
+  it("keeps EFFECT_GROUPS and effectsInGroup surface-only for the Appearance tab", () => {
+    expect(EFFECT_GROUPS).toEqual(["Ambient", "Hover", "Pointer", "Bold"]);
+    for (const group of EFFECT_GROUPS) {
+      for (const effect of effectsInGroup(group)) {
+        expect(effect.target, effect.id).toBe("surface");
+      }
+    }
+    // Even called with a new-target group value, the legacy API yields nothing.
+    expect(effectsInGroup("Text")).toEqual([]);
+    expect(effectsInGroup("Background")).toEqual([]);
+    expect(effectsInGroup("Entrance")).toEqual([]);
+  });
+
+  it("pins the legacy surface groups exactly as before this feature", () => {
+    expect(effectsInGroup("Ambient").map((e) => e.id)).toEqual([
+      "shimmer", "border-beam", "glow-pulse", "aurora", "breathe",
+    ]);
+    expect(effectsInGroup("Hover").map((e) => e.id)).toEqual([
+      "shine", "lift", "fill-sweep", "underline",
+    ]);
+    expect(effectsInGroup("Pointer").map((e) => e.id)).toEqual([
+      "spotlight", "magnetic", "trace",
+    ]);
+    expect(effectsInGroup("Bold").map((e) => e.id)).toEqual(["neon", "scanline", "grain"]);
+  });
+});
+
+describe("applyEffects", () => {
+  it("composes one class per assigned target, pl-fx first, in target order", () => {
+    expect(
+      applyEffects({
+        surface: "shimmer",
+        text: "text-gradient",
+        background: "bg-grid",
+        entrance: "enter-fade-up",
+      }),
+    ).toBe("pl-fx pl-fx-shimmer pl-fx-text-gradient pl-fx-bg-grid pl-fx-enter-fade-up");
+  });
+
+  it("applies a single assignment on its own", () => {
+    expect(applyEffects({ text: "text-wave" })).toBe("pl-fx pl-fx-text-wave");
+  });
+
+  it("returns an empty string when nothing resolves", () => {
+    expect(applyEffects({})).toBe("");
+    expect(applyEffects({ surface: "none" })).toBe("");
+    expect(applyEffects({ surface: "was-removed-in-v2" })).toBe("");
+  });
+
+  it("ignores unknown ids without dropping the rest", () => {
+    expect(applyEffects({ surface: "nonsense", entrance: "enter-zoom" })).toBe(
+      "pl-fx pl-fx-enter-zoom",
+    );
+  });
+
+  it("ignores ids filed under the wrong target", () => {
+    expect(applyEffects({ surface: "text-glitch" })).toBe("");
+    expect(applyEffects({ text: "shimmer", background: "bg-noise" })).toBe(
+      "pl-fx pl-fx-bg-noise",
+    );
   });
 });
 
@@ -77,6 +214,25 @@ describe("registry and stylesheet stay in step", () => {
 
   it("honours prefers-reduced-motion", () => {
     expect(css).toContain("prefers-reduced-motion: reduce");
+  });
+
+  it("keeps entrance effects inert until data-entered lands", () => {
+    // Every selector naming an entrance class hangs off [data-entered], so
+    // content is fully visible without JS and nothing is ever pre-hidden.
+    for (const effect of effectsForTarget("entrance")) {
+      const uses = [
+        ...css.matchAll(new RegExp(`\\.${effect.className}(?![a-z-])(\\[data-entered\\])?`, "g")),
+      ];
+      expect(uses.length, `${effect.id} appears in the css`).toBeGreaterThan(0);
+      for (const use of uses) {
+        expect(use[1], `${effect.id} is styled without data-entered`).toBe("[data-entered]");
+      }
+    }
+  });
+
+  it("silences the stagger children under reduced motion", () => {
+    const reduced = css.split("prefers-reduced-motion: reduce")[1] ?? "";
+    expect(reduced).toContain(".pl-fx-enter-stagger[data-entered] > *");
   });
 });
 

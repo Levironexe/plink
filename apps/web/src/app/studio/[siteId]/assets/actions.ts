@@ -111,7 +111,12 @@ export async function applyAsset(
       data: { url: safe, target },
     });
 
+    // The editor now has a different draft; the library's own placement list is
+    // also stale whenever the apply created a hero section, so both routes are
+    // refreshed — matching `generate/actions.ts`, which revalidates its own page
+    // alongside the editor's.
     revalidatePath(`/studio/${siteId}`);
+    revalidatePath(`/studio/${siteId}/assets`);
     return { ok: true };
   });
 }

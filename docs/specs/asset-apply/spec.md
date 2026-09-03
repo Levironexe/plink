@@ -132,8 +132,12 @@ Same shape and the same `withStore` access-error mapping as
 | `saveDraft` | the store's own message |
 
 On success: `writeAudit` `asset.apply` (`after` = `{ url, target }`), `logEvent`
-`asset_applied` (`data` = `{ url, target }`), `revalidatePath("/studio/<id>")`,
-`{ ok: true }`. The draft only — publishing stays a separate, deliberate act.
+`asset_applied` (`data` = `{ url, target }`), then `revalidatePath` for
+`/studio/<id>` **and** `/studio/<id>/assets` — the editor holds a different
+draft now, and the library's own placement list is stale whenever the apply
+created a hero section (`generate/actions.ts` revalidates its own page the same
+way). Returns `{ ok: true }`. The draft only — publishing stays a separate,
+deliberate act.
 
 ### `/studio/[siteId]/assets`
 

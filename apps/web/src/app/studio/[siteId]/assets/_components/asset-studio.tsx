@@ -170,24 +170,26 @@ function PlaceInSite({
 }) {
   const { toast } = useToast();
   const [chosen, setChosen] = React.useState<string | null>(null);
-  const [pending, setPending] = React.useState(false);
+  // The action revalidates two routes; running it inside a transition is what
+  // lets React commit that re-render with the pending state still showing —
+  // the same shape every other studio panel uses.
+  const [pending, startTransition] = React.useTransition();
 
   const selected = targets.find((option) => option.id === chosen) ?? targets[0];
   const heroes = targets.filter((option) => option.kind === "hero");
   const blocks = targets.filter((option) => option.kind === "block");
 
-  async function place() {
+  function place() {
     if (!selected || pending) return;
-    setPending(true);
-    try {
-      const result = await applyAsset(siteId, targetFor(selected), url);
-      if (result.ok) toast(`Placed in ${selected.label}`);
-      else toast(result.error, "error");
-    } catch {
-      toast("Couldn’t place that image. Please try again.", "error");
-    } finally {
-      setPending(false);
-    }
+    startTransition(async () => {
+      try {
+        const result = await applyAsset(siteId, targetFor(selected), url);
+        if (result.ok) toast(`Placed in ${selected.label}`);
+        else toast(result.error, "error");
+      } catch {
+        toast("Couldn’t place that image. Please try again.", "error");
+      }
+    });
   }
 
   if (targets.length === 0) {

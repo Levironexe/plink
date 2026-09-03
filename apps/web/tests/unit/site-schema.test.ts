@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BUTTON_RADII, radiusCss } from "@plink/core/themes";
 import {
   EFFECT_TARGETS,
   SITE_TEMPLATES,
@@ -75,6 +76,14 @@ describe("site document schema", () => {
 
   it("schema object is exported for composition", () => {
     expect(siteDocumentSchema.safeParse(emptySiteDocument("storefront")).success).toBe(true);
+  });
+
+  it("theme defaults name real ids, not their labels", () => {
+    // radiusCss/fontStack resolve by id and fall back silently — a label here
+    // ships the wrong style to every new site instead of failing loudly.
+    const { theme } = emptySiteDocument("editorial");
+    expect(BUTTON_RADII.map((r) => r.id)).toContain(theme.buttonRadius);
+    expect(radiusCss(theme.buttonRadius)).not.toBe("999px");
   });
 
   it("newId is prefixed and unique enough", () => {

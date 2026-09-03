@@ -121,9 +121,13 @@ describe("siteThemeVars", () => {
     expect(vars["--pl-site-fg"]).toBe(theme.textColor);
     expect(vars["--pl-site-muted"]).toBe(theme.mutedColor);
     expect(vars["--pl-site-accent-10"]).toBe("rgba(109, 40, 217, 0.1)");
-    // Unknown radius id ("rounded") falls back to the pill radius.
-    expect(vars["--pl-radius"]).toBe("999px");
+    // The default is a real BUTTON_RADII id, so it resolves to its own css.
+    expect(vars["--pl-radius"]).toBe("12px");
     expect(vars["--pl-font"]).toContain("sans-serif");
+  });
+
+  it("falls back to the pill radius for an unknown radius id", () => {
+    expect(siteThemeVars({ ...theme, buttonRadius: "no-such-radius" })["--pl-radius"]).toBe("999px");
   });
 });
 

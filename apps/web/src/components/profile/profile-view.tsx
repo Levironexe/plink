@@ -4,12 +4,15 @@ import * as React from "react";
 import Image from "next/image";
 import { CircleCheck, MapPin, Coffee, ArrowUpRight, Plus, Minus } from "lucide-react";
 import {
-  avatarRadius, backgroundCss, buttonCss, fontStack, patternCss, radiusCss, rgba,
+  avatarRadius, backgroundCss, buttonCss, fontStack, pageEffectVars, patternCss,
+  radiusCss, rgba,
 } from "@plink/core/themes";
 import { parseConfig, toEmbedUrl } from "@plink/core/blocks";
 import { socialPlatform } from "@plink/core/socials";
 import { cn, formatMoney, initialsOf, safeUrl } from "@plink/core/utils";
 import { EffectSurface, useSurfaceEffect } from "./effect-surface";
+import { entranceMode, profileEffectClasses } from "./profile-effects";
+import { EntranceGroup } from "@/components/effects";
 import { generatedAvatar } from "@plink/core/avatar";
 import { CalendarBlock } from "@/components/profile/calendar-block";
 import type { PublicBlock, PublicProfile } from "@plink/core/profile-types";
@@ -65,6 +68,15 @@ export function ProfileView({ profile, preview = false, className }: Props) {
   const { theme } = profile;
   const blocks = profile.blocks.filter((b) => b.visible);
 
+  // The creator's page-level effects. Every one of these is "" for a theme that
+  // has not opted in, and `cn` drops empty strings — so a page without effects
+  // renders exactly the markup it rendered before this feature existed.
+  const fx = profileEffectClasses(theme);
+  const entrance = entranceMode(theme.entranceEffect);
+  // Custom properties inherit, so the palette set here reaches the background
+  // effect on this element and the text effect on the headings below it.
+  const paletteVars = fx.background || fx.text ? pageEffectVars(theme) : undefined;
+
   const track = React.useCallback(
     (blockId: string) => {
       if (preview) return;
@@ -80,11 +92,28 @@ export function ProfileView({ profile, preview = false, className }: Props) {
 
   return (
     <div
-      className={cn("relative min-h-full w-full", className)}
-      style={{ ...backgroundCss(theme), color: theme.textColor, fontFamily: fontStack(theme.fontFamily) }}
+      // The background effect belongs on the element that already carries the
+      // theme background: it paints on ::before, behind every child and deaf to
+      // the pointer, so it can never swallow a click on a link.
+      className={cn("relative min-h-full w-full", fx.background, className)}
+      style={{
+        ...backgroundCss(theme),
+        ...paletteVars,
+        color: theme.textColor,
+        fontFamily: fontStack(theme.fontFamily),
+      }}
     >
       {theme.bgPattern !== "none" && (
-        <div className="pointer-events-none absolute inset-0" style={patternCss(theme)} aria-hidden />
+        // Positioned inline rather than with `absolute inset-0`: effects.css is
+        // imported unlayered, so its `.pl-fx > *` rule outranks Tailwind's
+        // layered `.absolute` the moment a background effect lands on the root.
+        // An inline declaration outranks both. See docs/spikes/2026-09-03-
+        // profile-effect-palette-and-attachment.md.
+        <div
+          className="pointer-events-none"
+          style={{ position: "absolute", inset: 0, ...patternCss(theme) }}
+          aria-hidden
+        />
       )}
 
       <div className="relative mx-auto flex w-full max-w-[600px] flex-col px-5 pb-16 pt-10">
@@ -105,7 +134,16 @@ export function ProfileView({ profile, preview = false, className }: Props) {
 
           {/* Only the live page owns the document's h1 — previews are embedded
               inside other pages that already have one. */}
-          <NameHeading preview={preview} className="mt-4 flex items-center gap-1.5 text-[22px] font-bold tracking-tight">
+          {/* The text effect lands on the heading, not the inner span: it is
+              block-level, which `wave` and `glitch` need to translate at all,
+              and `background-clip: text` still clips to the name inside it. */}
+          <NameHeading
+            preview={preview}
+            className={cn(
+              "mt-4 flex items-center gap-1.5 text-[22px] font-bold tracking-tight",
+              fx.text,
+            )}
+          >
             <span>{profile.displayName || `@${profile.username}`}</span>
             {profile.verified && (
               <CircleCheck className="size-[18px] shrink-0" style={{ color: theme.accentColor }} aria-label="Verified" />
@@ -139,16 +177,31 @@ export function ProfileView({ profile, preview = false, className }: Props) {
           )}
         </header>
 
-        <div className="mt-7 flex flex-col gap-3.5">
-          {blocks.map((block) => (
-            <BlockRenderer
-              key={block.id}
-              block={block}
-              profile={profile}
-              preview={preview}
-              onTrack={track}
-            />
-          ))}
+        {/* `enter-stagger` animates its children, so it wraps the list; every
+            other entrance effect animates itself, so it wraps each block and
+            plays as that block scrolls into view. With no effect the group is
+            inert and emits the same <div> as it always did. */}
+        <EntranceGroup
+          effect={entrance === "group" ? theme.entranceEffect : undefined}
+          className="mt-7 flex flex-col gap-3.5"
+        >
+          {blocks.map((block) => {
+            const rendered = (
+              <BlockRenderer
+                block={block}
+                profile={profile}
+                preview={preview}
+                onTrack={track}
+              />
+            );
+            return entrance === "item" ? (
+              <EntranceGroup key={block.id} effect={theme.entranceEffect}>
+                {rendered}
+              </EntranceGroup>
+            ) : (
+              <React.Fragment key={block.id}>{rendered}</React.Fragment>
+            );
+          })}
           {blocks.length === 0 && (
             <div
               className="rounded-2xl border border-dashed px-6 py-10 text-center text-sm"
@@ -157,7 +210,7 @@ export function ProfileView({ profile, preview = false, className }: Props) {
               Nothing here yet.
             </div>
           )}
-        </div>
+        </EntranceGroup>
 
         {!theme.hideBranding && (
           <footer className="mt-12 flex justify-center">
@@ -260,12 +313,20 @@ function BlockRenderer({
   const { theme } = profile;
 
   switch (block.type) {
-    case "header":
+    case "header": {
+      // Section headings are the only other place a text effect belongs. The
+      // explicit colour steps aside for it — the page already sets the same
+      // one, and `text-gradient` needs to own `color` to paint through it.
+      const textFx = profileEffectClasses(theme).text;
       return (
-        <h2 className="mt-4 text-center text-[15px] font-bold tracking-wide uppercase" style={{ color: theme.textColor }}>
+        <h2
+          className={cn("mt-4 text-center text-[15px] font-bold tracking-wide uppercase", textFx)}
+          style={{ color: textFx ? undefined : theme.textColor }}
+        >
           {block.title}
         </h2>
       );
+    }
 
     case "text":
       return (

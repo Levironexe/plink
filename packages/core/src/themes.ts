@@ -12,19 +12,40 @@ export type ThemeShape = {
   buttonRadius: string;
   buttonColor: string;
   buttonTextColor: string;
-  /** Effect id from @plink/effects. "none" is the resting look. */
+  /**
+   * Effect ids from @plink/effects, one per target. "none" is the resting look
+   * for all four, and an id belonging to another target resolves to nothing —
+   * a stale row can never break a page.
+   *
+   * `buttonEffect` is the surface target and predates the rest, which is why it
+   * keeps its original name.
+   */
   buttonEffect: string;
+  bgEffect: string;
+  textEffect: string;
+  entranceEffect: string;
   fontFamily: string;
   avatarShape: string;
   hideBranding: boolean;
 };
 
-/** A preset may name a signature effect; leaving it out means no effect. */
+/** The effect fields, which a preset never names and a caller always defaults. */
+type ThemeEffectKeys = "buttonEffect" | "bgEffect" | "textEffect" | "entranceEffect";
+
+/** Every effect target off, the state a theme starts in. */
+const NO_EFFECTS: Record<ThemeEffectKeys, string> = {
+  buttonEffect: "none",
+  bgEffect: "none",
+  textEffect: "none",
+  entranceEffect: "none",
+};
+
+/** A preset may name a signature surface effect; leaving it out means no effect. */
 export type ThemePreset = {
   id: string;
   name: string;
   group: "Signature" | "Minimal" | "Bold" | "Soft" | "Dark";
-  values: Omit<ThemeShape, "presetId" | "hideBranding" | "buttonEffect"> & {
+  values: Omit<ThemeShape, "presetId" | "hideBranding" | ThemeEffectKeys> & {
     buttonEffect?: string;
   };
 };
@@ -279,8 +300,8 @@ export const DEFAULT_THEME: ThemeShape = {
   hideBranding: false,
   ...THEME_PRESETS[0].values,
   // Last word, so a preset's signature effect never leaks into the fallback a
-  // user gets before they have a Theme row. Mirrors the column default.
-  buttonEffect: "none",
+  // user gets before they have a Theme row. Mirrors the column defaults.
+  ...NO_EFFECTS,
 };
 
 export const FONT_OPTIONS = [
@@ -445,17 +466,45 @@ export function buttonEffectVars(theme: ThemeShape): React.CSSProperties {
   } as React.CSSProperties;
 }
 
+/**
+ * The same variable contract, for effects that paint across the page rather
+ * than on a button — the background and text targets.
+ *
+ * Provenance is the whole point. `buttonEffectVars` reads the button palette,
+ * which is right for a shimmer on a link and wrong for a grid behind the page:
+ * on the `citrus` preset `buttonTextColor` is the very same lime as `bgColor`,
+ * so a background effect drawn from it would be invisible. Page-level effects
+ * read the colours they actually sit against.
+ */
+export function pageEffectVars(theme: ThemeShape): React.CSSProperties {
+  return {
+    "--pl-bg": theme.bgColor,
+    "--pl-fg": theme.textColor,
+    "--pl-accent": theme.accentColor,
+    "--pl-fg-12": rgba(theme.textColor, 0.12),
+    "--pl-fg-25": rgba(theme.textColor, 0.25),
+    "--pl-fg-45": rgba(theme.textColor, 0.45),
+    "--pl-accent-30": rgba(theme.accentColor, 0.3),
+    "--pl-accent-60": rgba(theme.accentColor, 0.6),
+  } as React.CSSProperties;
+}
+
 export function avatarRadius(shape: string) {
   if (shape === "square") return "0px";
   if (shape === "rounded") return "22px";
   return "999px";
 }
 
+/**
+ * A preset expanded into a full theme. The effect defaults come first so a
+ * preset's signature `buttonEffect` still wins, while the three targets no
+ * preset names — background, text, entrance — always land on "none".
+ */
 export function presetToTheme(preset: ThemePreset, hideBranding = false): ThemeShape {
   return {
     presetId: preset.id,
     hideBranding,
-    buttonEffect: "none",
+    ...NO_EFFECTS,
     ...preset.values,
   };
 }

@@ -7,9 +7,11 @@ import {
   safeHttpUrl,
   sanitizeGeneratedCopy,
   sanitizeGeneratedPage,
+  sanitizeGeneratedTheme,
 } from "@plink/ai";
 import { BLOCK_LIBRARY } from "@plink/core/blocks";
 import { THEME_PRESETS } from "@plink/core/themes";
+import { effectsForTarget } from "@plink/effects/registry";
 
 /**
  * These tests never touch the network. `sanitizeGeneratedPage` is a pure
@@ -350,6 +352,114 @@ describe("sanitizeGeneratedPage", () => {
 
     expect(first).toEqual(second);
     expect(input).toEqual(validPage);
+  });
+});
+
+describe("sanitizeGeneratedTheme — page effects", () => {
+  const themeOf = (effects: Record<string, unknown>) =>
+    sanitizeGeneratedTheme({ ...validPage.theme, ...effects });
+
+  it("leaves every page effect off when the model names none", () => {
+    const theme = sanitizeGeneratedTheme(validPage.theme);
+    expect(theme.bgEffect).toBe("none");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("keeps an id the registry files under that exact target", () => {
+    const theme = themeOf({
+      bgEffect: "bg-mesh-drift",
+      textEffect: "text-shimmer",
+      entranceEffect: "enter-stagger",
+    });
+    expect(theme.bgEffect).toBe("bg-mesh-drift");
+    expect(theme.textEffect).toBe("text-shimmer");
+    expect(theme.entranceEffect).toBe("enter-stagger");
+  });
+
+  it("accepts every id the registry offers for each target", () => {
+    for (const effect of effectsForTarget("background")) {
+      expect(themeOf({ bgEffect: effect.id }).bgEffect, effect.id).toBe(effect.id);
+    }
+    for (const effect of effectsForTarget("text")) {
+      expect(themeOf({ textEffect: effect.id }).textEffect, effect.id).toBe(effect.id);
+    }
+    for (const effect of effectsForTarget("entrance")) {
+      expect(themeOf({ entranceEffect: effect.id }).entranceEffect, effect.id).toBe(effect.id);
+    }
+  });
+
+  it("preserves an explicit none", () => {
+    const theme = themeOf({ bgEffect: "none", textEffect: "none", entranceEffect: "none" });
+    expect(theme.bgEffect).toBe("none");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("drops a real id filed under the wrong target", () => {
+    // The interesting attack: every value here names an effect that exists.
+    const theme = themeOf({
+      bgEffect: "text-glitch",
+      textEffect: "enter-zoom",
+      entranceEffect: "bg-noise",
+    });
+    expect(theme.bgEffect).toBe("none");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("drops a surface effect from every page-level target", () => {
+    const theme = themeOf({
+      bgEffect: "shimmer",
+      textEffect: "spotlight",
+      entranceEffect: "neon",
+    });
+    expect(theme.bgEffect).toBe("none");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("drops unknown ids and anything that is not a string", () => {
+    const theme = themeOf({
+      bgEffect: "bg-drop-tables",
+      textEffect: { toString: () => "text-wave" },
+      entranceEffect: 7,
+    });
+    expect(theme.bgEffect).toBe("none");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("never lets an effect id through as a class fragment", () => {
+    const theme = themeOf({
+      bgEffect: "bg-grid; background: url(javascript:alert(1))",
+      textEffect: "pl-fx-text-wave",
+      entranceEffect: "enter-fade-up enter-zoom",
+    });
+    expect(theme.bgEffect).toBe("none");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("keeps one valid target when its siblings are junk", () => {
+    const theme = themeOf({
+      bgEffect: "bg-dot-grid",
+      textEffect: "nonsense",
+      entranceEffect: null,
+    });
+    expect(theme.bgEffect).toBe("bg-dot-grid");
+    expect(theme.textEffect).toBe("none");
+    expect(theme.entranceEffect).toBe("none");
+  });
+
+  it("reaches the page sanitizer, not just the theme one", () => {
+    const page = sanitizeGeneratedPage({
+      ...validPage,
+      theme: { ...validPage.theme, bgEffect: "bg-beams", textEffect: "shimmer" },
+    });
+    expect(page.theme.bgEffect).toBe("bg-beams");
+    expect(page.theme.textEffect).toBe("none");
+    expect(page.theme.entranceEffect).toBe("none");
   });
 });
 

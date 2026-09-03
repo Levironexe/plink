@@ -4,7 +4,7 @@ import * as React from "react";
 import { Check, Copy, ImagePlus, Sparkles, TriangleAlert, Wand2 } from "lucide-react";
 import { Button } from "@plink/ui/button";
 import { TextArea } from "@plink/ui/field";
-import { ToastProvider, useToast } from "@plink/ui/toast";
+import { useToast } from "@plink/ui/toast";
 import { cn } from "@plink/core/utils";
 import type { AssetKind } from "@plink/ai/assets";
 import { applyAsset } from "../actions";
@@ -331,10 +331,7 @@ export function AssetStudio({
   }
 
   return (
-    // `/studio` has no layout to hold a ToastProvider — and this branch does not
-    // own one — so the panel mounts its own around the subtree that needs it
-    // (docs/spikes/2026-09-03-asset-placement-targets.md, §5).
-    <ToastProvider>
+    <>
       <div className="space-y-8">
         {configured ? (
           <form onSubmit={generate} className="card space-y-5 p-6">
@@ -416,6 +413,6 @@ export function AssetStudio({
           )}
         </section>
       </div>
-    </ToastProvider>
+    </>
   );
 }

@@ -152,12 +152,7 @@ quality figure.
 
 ## Future work
 
-- **`ai_proposal_edited`** — the event type is reserved and unused in V1.
-  Landing it needs Feature E's editor to carry a `generationId` through an edit
-  session so `AiGeneration.finalApplied` can hold the *edited* document while
-  `output` keeps the model's original; the diff between them is the human-effort
-  metric. V1 applies proposals verbatim, so `finalApplied === output` and the
-  event would carry no information.
+- ~~**`ai_proposal_edited`**~~ — shipped at publish time instead of through an edit session, alongside `ai_proposal_kept_verified` (`docs/specs/proposal-edited-metric/spec.md`).
 - Streaming the proposal (the call is 20–60 s behind a spinner today).
 - Per-section regeneration instead of whole-document regeneration.
 

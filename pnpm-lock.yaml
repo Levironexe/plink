@@ -135,6 +135,9 @@ importers:
       '@plink/core':
         specifier: workspace:*
         version: link:../core
+      '@plink/effects':
+        specifier: workspace:*
+        version: link:../effects
       ai:
         specifier: ^7.0.70
         version: 7.0.70(zod@4.4.3)

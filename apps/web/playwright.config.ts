@@ -21,10 +21,11 @@ export default defineConfig({
       // Pixel 5 is Chromium-based, so CI only needs one browser download.
       name: "mobile",
       use: { ...devices["Pixel 5"] },
-      // Effects are viewport-independent CSS, and the suite mutates the shared
-      // demo creator's theme — running it in both projects at once would have
-      // the two races clobbering each other's writes.
-      testIgnore: /effects\.spec\.ts/,
+      // Effects are viewport-independent CSS, and both suites mutate shared
+      // demo rows — the creator's theme and the seeded site's draft — so
+      // running them in both projects at once would have the two clobbering
+      // each other's writes. site.spec.ts is read-only and stays in both.
+      testIgnore: /(effects|studio)\.spec\.ts/,
     },
   ],
   webServer: {

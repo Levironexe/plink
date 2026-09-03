@@ -245,6 +245,262 @@
   100% { background-position: 0 0; }
 }
 
+/* ══════════════════════════════════════════════════════════════════ Text ══ */
+
+/*
+ * Text effects style the element's own letters — never a pseudo-element copy,
+ * so the accessible text, selection and copy behaviour are exactly the plain
+ * element's. One-shot reveals keep their hidden state inside the keyframes:
+ * with animations disabled the natural style remains and nothing is hidden.
+ * Wave and glitch animate `translate`, which browsers ignore on non-replaced
+ * inline elements — apply them to block-level text.
+ */
+
+.pl-fx-text-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--pl-accent),
+    var(--pl-fg) 50%,
+    var(--pl-accent)
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: pl-text-gradient 6s linear infinite;
+}
+@keyframes pl-text-gradient {
+  from { background-position: 0% 0; }
+  to { background-position: 200% 0; }
+}
+
+.pl-fx-text-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    var(--pl-fg) 38%,
+    var(--pl-accent) 50%,
+    var(--pl-fg) 62%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: pl-text-shimmer 3.2s linear infinite;
+}
+@keyframes pl-text-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+/* Clip-path rather than width: paint-only, wraps fine, and `animation: none`
+   leaves the element at its natural, fully visible state. */
+.pl-fx-text-typewriter {
+  animation: pl-text-typewriter 2.4s steps(28, end) 0.2s both;
+}
+@keyframes pl-text-typewriter {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+.pl-fx-text-blur-reveal {
+  animation: pl-text-blur-reveal 0.9s ease-out both;
+}
+@keyframes pl-text-blur-reveal {
+  from { opacity: 0; filter: blur(10px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+.pl-fx-text-wave {
+  animation: pl-text-wave 2.6s ease-in-out infinite;
+}
+@keyframes pl-text-wave {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -0.16em; }
+}
+
+/* Single-element glitch: resting for most of the loop, then a burst of
+   translate jitter and clip-path band slices. No text copies, no data-attrs. */
+.pl-fx-text-glitch {
+  animation: pl-text-glitch 3.2s steps(1, end) infinite;
+}
+@keyframes pl-text-glitch {
+  0%, 100% { translate: 0 0; clip-path: none; opacity: 1; }
+  88% { translate: 0 0; clip-path: none; opacity: 1; }
+  89% { translate: 0.06em 0; clip-path: inset(6% 0 58% 0); }
+  90% { translate: -0.08em 0; clip-path: inset(44% 0 24% 0); opacity: 0.85; }
+  91% { translate: 0.05em 0; clip-path: inset(72% 0 4% 0); }
+  92% { translate: -0.02em 0; clip-path: none; opacity: 1; }
+  93% { translate: 0 0; }
+}
+
+/* The static background-position is the finished stroke, so reduced motion
+   shows the words already highlighted. */
+.pl-fx-text-highlight {
+  background-image: linear-gradient(100deg, var(--pl-accent-30) 48%, transparent 52%);
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  background-position: 0% 0;
+  animation: pl-text-highlight 1s ease-out 0.2s both;
+}
+@keyframes pl-text-highlight {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+
+/* ════════════════════════════════════════════════════════════ Background ══ */
+
+/*
+ * Backgrounds paint on the ::before layer like every surface effect, so they
+ * sit behind content, ignore the pointer, and cost no JS. Patterns are static;
+ * the animated ones move nothing but background-position.
+ */
+
+.pl-fx-bg-aurora::before {
+  background:
+    radial-gradient(45% 120% at 15% 20%, var(--pl-accent-30), transparent 64%),
+    radial-gradient(40% 130% at 55% 60%, var(--pl-fg-12), transparent 60%),
+    radial-gradient(50% 120% at 88% 30%, var(--pl-accent-30), transparent 66%);
+  background-size: 170% 170%;
+  animation: pl-bg-aurora 16s ease-in-out infinite alternate;
+}
+@keyframes pl-bg-aurora {
+  from { background-position: 0% 0%; }
+  to { background-position: 100% 100%; }
+}
+
+.pl-fx-bg-beams::before {
+  background-image:
+    linear-gradient(115deg, transparent 42%, var(--pl-accent-30) 50%, transparent 58%),
+    linear-gradient(115deg, transparent 44%, var(--pl-fg-12) 50%, transparent 56%);
+  background-size: 240% 240%, 280% 280%;
+  animation: pl-bg-beams 11s ease-in-out infinite alternate;
+}
+@keyframes pl-bg-beams {
+  from { background-position: 0% 0%, 100% 100%; }
+  to { background-position: 100% 100%, 0% 0%; }
+}
+
+.pl-fx-bg-dot-grid::before {
+  background-image: radial-gradient(var(--pl-fg-25) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+
+.pl-fx-bg-grid::before {
+  background-image:
+    linear-gradient(var(--pl-fg-12) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pl-fg-12) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.pl-fx-bg-mesh-drift::before {
+  background:
+    radial-gradient(40% 45% at 18% 18%, var(--pl-accent-30), transparent 62%),
+    radial-gradient(45% 50% at 82% 24%, var(--pl-fg-12), transparent 60%),
+    radial-gradient(50% 55% at 28% 82%, var(--pl-fg-12), transparent 62%),
+    radial-gradient(38% 44% at 78% 78%, var(--pl-accent-30), transparent 58%);
+  background-size: 150% 150%;
+  animation: pl-bg-mesh-drift 22s ease-in-out infinite alternate;
+}
+@keyframes pl-bg-mesh-drift {
+  from { background-position: 0% 100%; }
+  to { background-position: 100% 0%; }
+}
+
+.pl-fx-bg-noise::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.08;
+}
+
+.pl-fx-bg-gradient-flow::before {
+  background-image: linear-gradient(
+    115deg,
+    var(--pl-accent-30),
+    transparent 35%,
+    var(--pl-fg-12) 55%,
+    transparent 75%,
+    var(--pl-accent-30)
+  );
+  background-size: 300% 300%;
+  animation: pl-bg-gradient-flow 14s ease-in-out infinite alternate;
+}
+@keyframes pl-bg-gradient-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+/* ══════════════════════════════════════════════════════════════ Entrance ══ */
+
+/*
+ * Entrance classes are inert until an EntranceGroup (or any script) sets
+ * `data-entered` on the element — so without JS the content simply sits there,
+ * fully visible. The hidden "from" states live only inside keyframes; killing
+ * the animation can never hide anything.
+ */
+
+.pl-fx-enter-fade-up[data-entered] {
+  animation: pl-enter-fade-up 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes pl-enter-fade-up {
+  from { opacity: 0; translate: 0 24px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.pl-fx-enter-fade-in[data-entered] {
+  animation: pl-enter-fade-in 0.8s ease both;
+}
+@keyframes pl-enter-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pl-fx-enter-zoom[data-entered] {
+  animation: pl-enter-zoom 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes pl-enter-zoom {
+  from { opacity: 0; scale: 0.92; }
+  to { opacity: 1; scale: 1; }
+}
+
+.pl-fx-enter-blur[data-entered] {
+  animation: pl-enter-blur 0.8s ease both;
+}
+@keyframes pl-enter-blur {
+  from { opacity: 0; filter: blur(12px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+.pl-fx-enter-slide-left[data-entered] {
+  animation: pl-enter-slide-left 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes pl-enter-slide-left {
+  from { opacity: 0; translate: 32px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.pl-fx-enter-slide-right[data-entered] {
+  animation: pl-enter-slide-right 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes pl-enter-slide-right {
+  from { opacity: 0; translate: -32px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* Direct children arrive a beat apart; the ninth onward share the last beat. */
+.pl-fx-enter-stagger[data-entered] > * {
+  animation: pl-enter-fade-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.56s;
+}
+.pl-fx-enter-stagger[data-entered] > :nth-child(1) { animation-delay: 0s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(2) { animation-delay: 0.07s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(3) { animation-delay: 0.14s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(4) { animation-delay: 0.21s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(5) { animation-delay: 0.28s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(6) { animation-delay: 0.35s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(7) { animation-delay: 0.42s; }
+.pl-fx-enter-stagger[data-entered] > :nth-child(8) { animation-delay: 0.49s; }
+
 /* ═════════════════════════════════════════════════════════ Accessibility ══ */
 
 /*
@@ -254,7 +510,8 @@
 @media (prefers-reduced-motion: reduce) {
   .pl-fx,
   .pl-fx::before,
-  .pl-fx::after {
+  .pl-fx::after,
+  .pl-fx-enter-stagger[data-entered] > * {
     animation: none !important;
     transition: none !important;
   }

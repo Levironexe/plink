@@ -242,6 +242,10 @@ importers:
         version: 5.9.3
 
   packages/effects:
+    dependencies:
+      '@plink/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@plink/eslint-config':
         specifier: workspace:*

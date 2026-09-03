@@ -127,7 +127,8 @@ describe("siteThemeVars", () => {
   });
 
   it("falls back to the pill radius for an unknown radius id", () => {
-    expect(siteThemeVars({ ...theme, buttonRadius: "no-such-radius" })["--pl-radius"]).toBe("999px");
+    const unknown = siteThemeVars({ ...theme, buttonRadius: "no-such-radius" }) as Record<string, string>;
+    expect(unknown["--pl-radius"]).toBe("999px");
   });
 });
 

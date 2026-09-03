@@ -22,6 +22,8 @@ import {
   presetToTheme,
   type ThemeShape,
 } from "@plink/core/themes";
+import { EFFECT_NONE, effectById, effectsForTarget } from "@plink/effects/registry";
+import type { EffectTarget } from "@plink/core/site-schema";
 
 /* ─────────────────────────────────────────────────────────────
    Gateway configuration
@@ -87,6 +89,14 @@ const FONT_IDS = FONT_OPTIONS.map((f) => f.id);
 const BG_TYPES = ["solid", "gradient"];
 const AVATAR_SHAPES = ["circle", "rounded", "square"];
 
+/** The effect ids the model may name for one target, plus opting out. */
+function effectIdsFor(target: EffectTarget): string[] {
+  return [EFFECT_NONE, ...effectsForTarget(target).map((e) => e.id)];
+}
+const BG_EFFECT_IDS = effectIdsFor("background");
+const TEXT_EFFECT_IDS = effectIdsFor("text");
+const ENTRANCE_EFFECT_IDS = effectIdsFor("entrance");
+
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 const HTTP_URL = /^https?:\/\//i;
 const URL_LIKE_KEY = /(^|[a-z])(url|href|src|link)$/i;
@@ -118,6 +128,14 @@ export const generatedThemeSchema = z.object({
   buttonStyle: z.enum(BUTTON_STYLE_IDS),
   buttonRadius: z.enum(BUTTON_RADIUS_IDS),
   fontFamily: z.enum(FONT_IDS),
+  /**
+   * Page-level effects, one id per target. Advertised so the model names ids
+   * that exist; `sanitizeGeneratedTheme` still checks the target itself,
+   * because a structured-output schema is a hint and never a guarantee.
+   */
+  bgEffect: z.enum(BG_EFFECT_IDS).optional(),
+  textEffect: z.enum(TEXT_EFFECT_IDS).optional(),
+  entranceEffect: z.enum(ENTRANCE_EFFECT_IDS).optional(),
 });
 
 /**
@@ -288,6 +306,20 @@ function pickHex(value: unknown, fallback: string): string {
 }
 
 /**
+ * An effect id the registry files under exactly this target, or "none".
+ *
+ * The target check is the point: `text-glitch` is a real id, but writing it to
+ * `bgEffect` would put a class on the page background that was never designed
+ * to go there. An unknown id, a wrong-target id and a non-string all collapse
+ * to "none", so a generated theme can never smuggle one into the database.
+ */
+function pickEffect(value: unknown, target: EffectTarget): string {
+  if (typeof value !== "string") return EFFECT_NONE;
+  const effect = effectById(value.trim());
+  return effect.id !== EFFECT_NONE && effect.target === target ? effect.id : EFFECT_NONE;
+}
+
+/**
  * Resolves a model theme against a real preset. Any field the model got wrong
  * falls back to the preset value, so the result is always renderable.
  * Background images and branding flags are never model-controlled.
@@ -313,6 +345,9 @@ export function sanitizeGeneratedTheme(raw: unknown): ThemeShape {
     buttonStyle: pickFrom(input.buttonStyle, BUTTON_STYLE_IDS, base.buttonStyle),
     buttonRadius: pickFrom(input.buttonRadius, BUTTON_RADIUS_IDS, base.buttonRadius),
     fontFamily: pickFrom(input.fontFamily, FONT_IDS, base.fontFamily),
+    bgEffect: pickEffect(input.bgEffect, "background"),
+    textEffect: pickEffect(input.textEffect, "text"),
+    entranceEffect: pickEffect(input.entranceEffect, "entrance"),
     bgImageUrl: null,
     hideBranding: false,
   };
@@ -398,6 +433,11 @@ export function pageSystemPrompt(): string {
     "Theme presets you may reference by id (nothing else):",
     themeCatalogue(),
     "",
+    "Optional page effects. One id per field, or \"none\":",
+    `- bgEffect: ${BG_EFFECT_IDS.join(", ")}`,
+    `- textEffect: ${TEXT_EFFECT_IDS.join(", ")}`,
+    `- entranceEffect: ${ENTRANCE_EFFECT_IDS.join(", ")}`,
+    "",
     "Rules:",
     `- Return between 4 and ${AI_LIMITS.maxBlocks} blocks, ordered the way a visitor should read them.`,
     "- Lead with the creator's single most important destination.",
@@ -409,6 +449,8 @@ export function pageSystemPrompt(): string {
     "- The bio is one or two sentences in the creator's own voice, never marketing filler.",
     "- Pick a preset that matches the creator's craft, then override colours only when",
     "  the description clearly calls for it. Colours must be #rrggbb hex.",
+    "- Effects are seasoning. Leave them \"none\" unless the creator's craft clearly asks",
+    "  for one, and never set more than one of the three.",
   ].join("\n");
 }
 

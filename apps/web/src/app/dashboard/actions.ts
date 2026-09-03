@@ -25,8 +25,8 @@ async function requireUserId() {
 const DEFAULT_THEME_KEYS = {
   presetId: 1, bgType: 1, bgColor: 1, bgColorTwo: 1, bgImageUrl: 1, bgPattern: 1,
   textColor: 1, mutedColor: 1, accentColor: 1, buttonStyle: 1, buttonRadius: 1,
-  buttonColor: 1, buttonTextColor: 1, buttonEffect: 1, fontFamily: 1, avatarShape: 1,
-  hideBranding: 1,
+  buttonColor: 1, buttonTextColor: 1, buttonEffect: 1, bgEffect: 1, textEffect: 1,
+  entranceEffect: 1, fontFamily: 1, avatarShape: 1, hideBranding: 1,
 } as const;
 
 function revalidateAll(username?: string) {
@@ -245,7 +245,12 @@ const themeSchema = z.object({
   buttonRadius: z.string().max(20).optional(),
   buttonColor: z.string().max(30).optional(),
   buttonTextColor: z.string().max(30).optional(),
+  // One effect id per target. Ids are validated at render, not here — an id the
+  // registry no longer knows resolves to nothing rather than breaking a page.
   buttonEffect: z.string().max(40).optional(),
+  bgEffect: z.string().max(40).optional(),
+  textEffect: z.string().max(40).optional(),
+  entranceEffect: z.string().max(40).optional(),
   fontFamily: z.string().max(20).optional(),
   avatarShape: z.string().max(20).optional(),
   hideBranding: z.boolean().optional(),

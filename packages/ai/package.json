@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@plink/core": "workspace:*",
+    "@plink/effects": "workspace:*",
     "ai": "^7.0.70",
     "zod": "^4.4.3"
   },

@@ -12,6 +12,9 @@
     "lint": "eslint",
     "clean": "rm -rf node_modules"
   },
+  "dependencies": {
+    "@plink/core": "workspace:*"
+  },
   "devDependencies": {
     "@plink/eslint-config": "workspace:*",
     "@plink/typescript-config": "workspace:*",

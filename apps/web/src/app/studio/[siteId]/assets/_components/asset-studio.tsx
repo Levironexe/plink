@@ -1,24 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, Sparkles, TriangleAlert, Wand2 } from "lucide-react";
+import { Check, Copy, ImagePlus, Sparkles, TriangleAlert, Wand2 } from "lucide-react";
 import { Button } from "@plink/ui/button";
 import { TextArea } from "@plink/ui/field";
+import { ToastProvider, useToast } from "@plink/ui/toast";
 import { cn } from "@plink/core/utils";
 import type { AssetKind } from "@plink/ai/assets";
+import { applyAsset } from "../actions";
+import type { AssetTarget, AssetTargetOption } from "../_lib/apply-asset";
 
 /**
- * The asset library panel: one form that generates, one grid that remembers.
- *
- * Applying an asset to the site document is deliberately not here — the editor
- * owns document mutations. Copy-URL is the bridge: paste the link into whatever
- * field wants an image (docs/specs/asset-generator/spec.md, "Out of scope").
+ * The asset library panel: one form that generates, one grid that remembers,
+ * and — since `feat/asset-apply` — one control per card that puts an image into
+ * the site's draft (docs/specs/asset-apply/spec.md). Copy-URL stays: it is
+ * still the way to hand a link to something outside the studio.
  *
  * `AssetKind` is imported as a *type* and the kind list arrives as a prop from
  * the server page. A value import from `@plink/ai/assets` would pull the whole
  * AI SDK into the browser bundle — `@plink/ai` is not marked side-effect-free,
  * so tree-shaking would not save us. The `Record<AssetKind, …>` tables below
- * still fail to compile if the package ever grows a fourth kind.
+ * still fail to compile if the package ever grows a fourth kind. The placement
+ * list arrives the same way, so the schema never crosses into this bundle
+ * either; only the two `AssetTarget` types do, and types are erased.
  */
 
 export type AssetSummary = {
@@ -137,9 +141,108 @@ function CopyUrlButton({ url }: { url: string }) {
   );
 }
 
+/* --------------------------------------------------------- place in site */
+
+/** The `AssetTarget` an option row addresses — the picker's only translation. */
+function targetFor(option: AssetTargetOption): AssetTarget {
+  return option.kind === "hero"
+    ? { kind: "hero", pageId: option.id }
+    : { kind: "block", blockId: option.id };
+}
+
+/**
+ * Pick a placement, press the button, the draft is saved. A native `<select>`
+ * with two `<optgroup>`s: the platform's own listbox is keyboard- and
+ * screen-reader-complete, and "no new dependency" is a hard rule.
+ *
+ * The selection is *derived*, never mirrored into state — an apply can add a
+ * hero section, and the refreshed `targets` prop then rewrites the list
+ * underneath this component.
+ */
+function PlaceInSite({
+  siteId,
+  url,
+  targets,
+}: {
+  siteId: string;
+  url: string;
+  targets: AssetTargetOption[];
+}) {
+  const { toast } = useToast();
+  const [chosen, setChosen] = React.useState<string | null>(null);
+  const [pending, setPending] = React.useState(false);
+
+  const selected = targets.find((option) => option.id === chosen) ?? targets[0];
+  const heroes = targets.filter((option) => option.kind === "hero");
+  const blocks = targets.filter((option) => option.kind === "block");
+
+  async function place() {
+    if (!selected || pending) return;
+    setPending(true);
+    try {
+      const result = await applyAsset(siteId, targetFor(selected), url);
+      if (result.ok) toast(`Placed in ${selected.label}`);
+      else toast(result.error, "error");
+    } catch {
+      toast("Couldn’t place that image. Please try again.", "error");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (targets.length === 0) {
+    return (
+      <p className="text-[12px] leading-4 text-ink-muted">
+        This site&rsquo;s draft can&rsquo;t be read, so there is nowhere to place an image yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <select
+        aria-label="Where to place this image"
+        className="field h-8 min-w-0 flex-1 py-0 text-[13px]"
+        value={selected?.id ?? ""}
+        onChange={(event) => setChosen(event.target.value)}
+        disabled={pending}
+      >
+        <optgroup label="Page hero">
+          {heroes.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </optgroup>
+        {blocks.length > 0 && (
+          <optgroup label="Image blocks">
+            {blocks.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+      <Button type="button" size="sm" onClick={place} loading={pending} disabled={!selected}>
+        {!pending && <ImagePlus className="size-4" aria-hidden />}
+        Place
+      </Button>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ gallery */
 
-function AssetCard({ asset }: { asset: AssetSummary }) {
+function AssetCard({
+  asset,
+  siteId,
+  targets,
+}: {
+  asset: AssetSummary;
+  siteId: string;
+  targets: AssetTargetOption[];
+}) {
   return (
     <figure className="card overflow-hidden">
       <div className={cn("bg-canvas-deep", KIND_ASPECT[asset.assetKind])}>
@@ -163,6 +266,7 @@ function AssetCard({ asset }: { asset: AssetSummary }) {
         <p className="line-clamp-3 text-[13px] leading-5 tracking-[-0.01em] text-ink-soft">
           {asset.prompt || "No prompt recorded"}
         </p>
+        <PlaceInSite siteId={siteId} url={asset.url} targets={targets} />
         <CopyUrlButton url={asset.url} />
       </figcaption>
     </figure>
@@ -177,6 +281,7 @@ export function AssetStudio({
   configured,
   kinds,
   promptMax,
+  targets,
 }: {
   siteId: string;
   initialAssets: AssetSummary[];
@@ -184,6 +289,8 @@ export function AssetStudio({
   /** `ASSET_KINDS`, handed down so the SDK stays out of this bundle. */
   kinds: readonly AssetKind[];
   promptMax: number;
+  /** `imageTargets(draft)`, computed on the server; empty when it will not parse. */
+  targets: AssetTargetOption[];
 }) {
   const [assets, setAssets] = React.useState(initialAssets);
   const [kind, setKind] = React.useState<AssetKind>(kinds[0] ?? "hero");
@@ -222,86 +329,91 @@ export function AssetStudio({
   }
 
   return (
-    <div className="space-y-8">
-      {configured ? (
-        <form onSubmit={generate} className="card space-y-5 p-6">
-          <div>
-            <h2 className="text-[16px] font-medium tracking-[-0.02em] text-ink">Generate an image</h2>
-            <p className="mt-1 text-[13px] leading-5 text-ink-muted">
-              Describe the subject and the mood. The generator handles the framing.
-            </p>
-          </div>
-
-          <KindPicker kinds={kinds} value={kind} onChange={setKind} disabled={pending} />
-
-          <div>
-            <TextArea
-              label="Prompt"
-              value={prompt}
-              onChange={(e) => {
-                setPrompt(e.target.value);
-                setError(null);
-              }}
-              maxLength={promptMax}
-              disabled={pending}
-              placeholder="A sunlit ceramics workshop, clay dust in the air, warm terracotta and off-white"
-            />
-            <p className="mt-1.5 text-right text-[12px] text-ink-muted">
-              {trimmed.length} / {promptMax}
-            </p>
-          </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 rounded-md border border-danger/25 bg-danger-soft px-4 py-3"
-            >
-              <TriangleAlert className="mt-px size-4 shrink-0 text-danger-deep" aria-hidden />
-              <p className="text-[14px] leading-5 tracking-[-0.02em] text-danger-deep">{error}</p>
+    // `/studio` has no layout to hold a ToastProvider — and this branch does not
+    // own one — so the panel mounts its own around the subtree that needs it
+    // (docs/spikes/2026-09-03-asset-placement-targets.md, §5).
+    <ToastProvider>
+      <div className="space-y-8">
+        {configured ? (
+          <form onSubmit={generate} className="card space-y-5 p-6">
+            <div>
+              <h2 className="text-[16px] font-medium tracking-[-0.02em] text-ink">Generate an image</h2>
+              <p className="mt-1 text-[13px] leading-5 text-ink-muted">
+                Describe the subject and the mood. The generator handles the framing.
+              </p>
             </div>
-          )}
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[13px] text-ink-muted">Takes about half a minute.</p>
-            <Button type="submit" loading={pending} disabled={!trimmed}>
-              {!pending && <Wand2 className="size-4" aria-hidden />}
-              {pending ? "Generating…" : "Generate"}
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <div className="card flex items-start gap-3 p-6">
-          <span className="grid size-9 shrink-0 place-items-center rounded-md border border-line bg-canvas text-ink-muted">
-            <Sparkles className="size-4" aria-hidden />
-          </span>
-          <div>
-            <h2 className="text-[16px] font-medium tracking-[-0.02em] text-ink">Image generation isn’t configured</h2>
-            <p className="mt-1 max-w-xl text-[14px] leading-5 tracking-[-0.02em] text-ink-soft">
-              Add an <code className="font-mono text-[13px]">AI_GATEWAY_API_KEY</code> to{" "}
-              <code className="font-mono text-[13px]">.env.local</code> and restart the server. Anything already in
-              this library stays available.
-            </p>
-          </div>
-        </div>
-      )}
+            <KindPicker kinds={kinds} value={kind} onChange={setKind} disabled={pending} />
 
-      <section>
-        <p className="eyebrow mb-3 uppercase">library · {assets.length}</p>
-        {assets.length === 0 ? (
-          <div className="flex flex-col items-center rounded-xl border border-dashed border-line bg-canvas px-6 py-12 text-center">
-            <Sparkles className="size-5 text-ink-muted" aria-hidden />
-            <p className="mt-3 max-w-sm text-[14px] leading-5 tracking-[-0.02em] text-ink-soft">
-              Nothing generated yet. The first hero you make will show up here, ready to drop into the site.
-            </p>
-          </div>
+            <div>
+              <TextArea
+                label="Prompt"
+                value={prompt}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  setError(null);
+                }}
+                maxLength={promptMax}
+                disabled={pending}
+                placeholder="A sunlit ceramics workshop, clay dust in the air, warm terracotta and off-white"
+              />
+              <p className="mt-1.5 text-right text-[12px] text-ink-muted">
+                {trimmed.length} / {promptMax}
+              </p>
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 rounded-md border border-danger/25 bg-danger-soft px-4 py-3"
+              >
+                <TriangleAlert className="mt-px size-4 shrink-0 text-danger-deep" aria-hidden />
+                <p className="text-[14px] leading-5 tracking-[-0.02em] text-danger-deep">{error}</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[13px] text-ink-muted">Takes about half a minute.</p>
+              <Button type="submit" loading={pending} disabled={!trimmed}>
+                {!pending && <Wand2 className="size-4" aria-hidden />}
+                {pending ? "Generating…" : "Generate"}
+              </Button>
+            </div>
+          </form>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {assets.map((asset) => (
-              <AssetCard key={asset.id} asset={asset} />
-            ))}
+          <div className="card flex items-start gap-3 p-6">
+            <span className="grid size-9 shrink-0 place-items-center rounded-md border border-line bg-canvas text-ink-muted">
+              <Sparkles className="size-4" aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-[16px] font-medium tracking-[-0.02em] text-ink">Image generation isn’t configured</h2>
+              <p className="mt-1 max-w-xl text-[14px] leading-5 tracking-[-0.02em] text-ink-soft">
+                Add an <code className="font-mono text-[13px]">AI_GATEWAY_API_KEY</code> to{" "}
+                <code className="font-mono text-[13px]">.env.local</code> and restart the server. Anything already in
+                this library stays available.
+              </p>
+            </div>
           </div>
         )}
-      </section>
-    </div>
+
+        <section>
+          <p className="eyebrow mb-3 uppercase">library · {assets.length}</p>
+          {assets.length === 0 ? (
+            <div className="flex flex-col items-center rounded-xl border border-dashed border-line bg-canvas px-6 py-12 text-center">
+              <Sparkles className="size-5 text-ink-muted" aria-hidden />
+              <p className="mt-3 max-w-sm text-[14px] leading-5 tracking-[-0.02em] text-ink-soft">
+                Nothing generated yet. The first hero you make will show up here, ready to drop into the site.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {assets.map((asset) => (
+                <AssetCard key={asset.id} asset={asset} siteId={siteId} targets={targets} />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </ToastProvider>
   );
 }

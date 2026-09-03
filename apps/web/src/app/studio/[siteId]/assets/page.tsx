@@ -4,8 +4,10 @@ import type { Metadata } from "next";
 import { prisma } from "@plink/db";
 import { aiEnabled } from "@plink/ai";
 import { ASSET_KINDS, ASSET_PROMPT_MAX, type AssetKind } from "@plink/ai/assets";
+import { safeParseSiteDocument } from "@plink/core/site-schema";
 import { requireSite } from "@/lib/workspace";
 import { PageHeader } from "../../_components/primitives";
+import { imageTargets, type AssetTargetOption } from "./_lib/apply-asset";
 import { AssetStudio, type AssetSummary } from "./_components/asset-studio";
 
 type Params = { params: Promise<{ siteId: string }> };
@@ -28,10 +30,26 @@ function assetKindFrom(meta: string): AssetKind {
   }
 }
 
+/**
+ * The placements the picker offers, read off the stored draft. A draft that no
+ * longer parses yields an empty list — the panel then explains itself and
+ * disables the control, which beats failing a page whose gallery still works.
+ */
+function placementsFor(raw: string): AssetTargetOption[] {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const document = safeParseSiteDocument(parsed);
+  return document ? imageTargets(document) : [];
+}
+
 export default async function AssetsPage({ params }: Params) {
   const { siteId } = await params;
 
-  let site: { id: string; name: string };
+  let site: { id: string; name: string; document: string };
   try {
     site = (await requireSite(siteId)).site;
   } catch (error) {
@@ -71,14 +89,16 @@ export default async function AssetsPage({ params }: Params) {
       />
 
       <div className="mt-8">
-        {/* The kind list and the prompt ceiling cross the boundary as data, so
-            the client bundle never imports the AI SDK. */}
+        {/* The kind list, the prompt ceiling and the placement list cross the
+            boundary as data, so the client bundle never imports the AI SDK or
+            the site schema. */}
         <AssetStudio
           siteId={site.id}
           initialAssets={assets}
           configured={aiEnabled()}
           kinds={ASSET_KINDS}
           promptMax={ASSET_PROMPT_MAX}
+          targets={placementsFor(site.document)}
         />
       </div>
     </main>

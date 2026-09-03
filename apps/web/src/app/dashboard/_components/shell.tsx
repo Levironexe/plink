@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Palette, ChartColumn, Store, Users, Newspaper, Settings,
   CalendarDays, Mails, CreditCard, ExternalLink, LogOut, Menu, X, Check, Copy,
-  ArrowUpRight,
+  ArrowUpRight, LayoutTemplate,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { cn } from "@plink/core/utils";
@@ -29,6 +29,11 @@ const NAV: NavGroup[] = [
       { href: "/dashboard/appearance", label: "Appearance", icon: Palette },
       { href: "/dashboard/analytics", label: "Analytics", icon: ChartColumn },
     ],
+  },
+  {
+    // The Website OS lives outside /dashboard, so this is the only way into it.
+    title: "Build",
+    items: [{ href: "/studio", label: "Studio", icon: LayoutTemplate }],
   },
   {
     title: "Earn",

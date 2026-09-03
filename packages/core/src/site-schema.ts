@@ -109,7 +109,9 @@ export const siteThemeSchema = z
     buttonColor: z.string().max(30).default("#171717"),
     buttonTextColor: z.string().max(30).default("#ffffff"),
     buttonStyle: z.string().max(20).default("solid"),
-    buttonRadius: z.string().max(20).default("rounded"),
+    // A real BUTTON_RADII id, not its label: `radiusCss` falls back to 999px
+    // (pill) for anything it cannot find, so "rounded" silently shipped pills.
+    buttonRadius: z.string().max(20).default("md"),
     fontFamily: z.string().max(20).default("sans"),
   })
   .strict();

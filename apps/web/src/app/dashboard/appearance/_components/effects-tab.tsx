@@ -5,13 +5,19 @@ import { Check, Sparkles, TriangleAlert } from "lucide-react";
 import {
   EFFECT_GROUPS, EFFECT_NONE, EFFECTS, effectById, effectsInGroup,
 } from "@plink/effects/registry";
-import { buttonCss, buttonEffectVars, type ThemeShape } from "@plink/core/themes";
+import { buttonCss, buttonEffectVars, pageEffectVars, type ThemeShape } from "@plink/core/themes";
 import { cn } from "@plink/core/utils";
+import { EffectPicker } from "@/components/effects";
+import type { EffectTarget } from "@plink/core/site-schema";
 
 /**
  * The effect picker. Every swatch is a real button wearing the creator's own
  * palette and running the real effect, so what they see here is exactly what
  * lands on their page — no illustrations to keep in sync.
+ *
+ * Four targets, one per column on `Theme`: the surface section at the top has
+ * driven `buttonEffect` since the beginning and is unchanged; background, text
+ * and entrance follow, each reaching the shared `EffectPicker` for its target.
  */
 export function EffectsTab({
   theme,
@@ -21,6 +27,17 @@ export function EffectsTab({
   patch: (next: Partial<ThemeShape>) => void;
 }) {
   const active = effectById(theme.buttonEffect);
+
+  // The page's own palette and backdrop, so every swatch below previews in the
+  // colours it will actually wear. Page-level effects read `pageEffectVars`
+  // rather than the button palette — see the profile-effects spike.
+  const pagePalette: React.CSSProperties = {
+    ...pageEffectVars(theme),
+    background:
+      theme.bgType === "gradient"
+        ? `linear-gradient(160deg, ${theme.bgColor}, ${theme.bgColorTwo})`
+        : theme.bgColor,
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -74,12 +91,70 @@ export function EffectsTab({
         );
       })}
 
+      <PageEffectSection
+        title="Background"
+        description="Paints behind your whole page, under every block. Nothing here takes a tap."
+        target="background"
+        value={theme.bgEffect}
+        palette={pagePalette}
+        onChange={(id) => patch({ bgEffect: id ?? EFFECT_NONE })}
+      />
+
+      <PageEffectSection
+        title="Text"
+        description="Styles your display name and any section headings — not your links or body text."
+        target="text"
+        value={theme.textEffect}
+        palette={pagePalette}
+        onChange={(id) => patch({ textEffect: id ?? EFFECT_NONE })}
+      />
+
+      <PageEffectSection
+        title="Entrance"
+        description="Your blocks animate in as they scroll into view. Plays once, then stays put."
+        target="entrance"
+        value={theme.entranceEffect}
+        palette={pagePalette}
+        onChange={(id) => patch({ entranceEffect: id ?? EFFECT_NONE })}
+      />
+
       <p className="flex items-start gap-2 px-1 text-[13px] leading-relaxed text-ink-muted">
         <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
         Visitors who ask their device to reduce motion see your page without animation.
         Every effect is built to look right standing still.
       </p>
     </div>
+  );
+}
+
+/**
+ * One page-level target, in the same panel chrome as the surface sections
+ * above it. All DESIGN.md tokens — the creator's colours live inside the
+ * swatches, never in the dashboard around them.
+ */
+function PageEffectSection({
+  title,
+  description,
+  target,
+  value,
+  palette,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  target: EffectTarget;
+  value: string;
+  palette: React.CSSProperties;
+  onChange: (id: string | undefined) => void;
+}) {
+  return (
+    <section className="rounded-xl border border-line bg-surface p-5 shadow-soft sm:p-6">
+      <h2 className="text-[17px] font-bold text-ink">{title}</h2>
+      <p className="mt-1 text-[14px] text-ink-muted">{description}</p>
+      <div className="mt-5">
+        <EffectPicker target={target} value={value} onChange={onChange} palette={palette} />
+      </div>
+    </section>
   );
 }
 

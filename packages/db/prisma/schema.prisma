@@ -103,8 +103,12 @@ model Theme {
   buttonRadius   String  @default("full")   // none | sm | md | lg | full
   buttonColor    String  @default("#ffffff")
   buttonTextColor String @default("#111111")
-  // Effect id from @plink/effects; unknown values fall back to "none" at render.
+  // Effect ids from @plink/effects, one per target; unknown values fall back to
+  // "none" at render. buttonEffect is the surface target and predates the rest.
   buttonEffect   String  @default("none")
+  bgEffect       String  @default("none")
+  textEffect     String  @default("none")
+  entranceEffect String  @default("none")
   fontFamily     String  @default("inter")
   avatarShape    String  @default("circle") // circle | rounded | square
   hideBranding   Boolean @default(false)

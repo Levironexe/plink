@@ -6,7 +6,11 @@ import {
   safeParseSiteDocument,
   type SiteDocument,
 } from "@plink/core/site-schema";
-import { diffDocuments, nextVersionNumber } from "@plink/core/site-versioning";
+import {
+  diffDocuments,
+  nextVersionNumber,
+  type DocumentDiff,
+} from "@plink/core/site-versioning";
 
 /**
  * The publish pipeline: draft save, versioned publish, rollback, audit log
@@ -154,6 +158,95 @@ export async function saveDraft(siteId: string, document: unknown): Promise<Stor
   return { ok: true };
 }
 
+/* -------------------------------------------- AI proposal outcome metrics */
+
+/**
+ * The two events that credit a generation with a published outcome. Their
+ * presence in `EventLog` *is* the record that a generation has been measured
+ * — with the Prisma schema frozen there is no `AiGeneration.creditedAt` to
+ * consult (docs/spikes/2026-09-03-proposal-edited-at-publish-time.md).
+ */
+const AI_OUTCOME_EVENTS = ["ai_proposal_kept_verified", "ai_proposal_edited"] as const;
+
+function readGenerationId(raw: string): string | null {
+  const parsed = readStoredDocument(raw) as { generationId?: unknown } | null;
+  return typeof parsed?.generationId === "string" ? parsed.generationId : null;
+}
+
+function isUnchanged(diff: DocumentDiff): boolean {
+  return (
+    diff.pagesAdded.length === 0 &&
+    diff.pagesRemoved.length === 0 &&
+    diff.sectionsChanged === 0 &&
+    diff.blocksChanged === 0
+  );
+}
+
+/**
+ * Records how much of the shipped site the model actually wrote (plan §6,
+ * constitution III.4 — human edits of AI generations are recorded).
+ *
+ * Publish is the moment a human has finished editing and committed to a
+ * result, so that is where the signal fires: the just-published document is
+ * diffed against the proposal that seeded it, and the outcome is logged as
+ * `ai_proposal_kept_verified` (shipped verbatim) or `ai_proposal_edited`
+ * (rewritten, with the real diff counts). A site with no applied proposal
+ * emits nothing — a hand-built site must not show up as an AI metric — and
+ * each generation is credited exactly once, however often the site is
+ * republished afterwards.
+ *
+ * SWALLOWS EVERY ERROR, DELIBERATELY. This observes an operation that has
+ * already committed; the audit row and `publish` event that *describe* the
+ * publish stay inside its transaction, but a failed measurement must never
+ * cost an operator their version snapshot or turn a successful publish into
+ * a reported failure. Metrics do not get to break the product. The cost is
+ * an occasional missing row, which the next publish of that generation
+ * re-attempts.
+ */
+async function recordAiProposalOutcome(
+  userId: string,
+  siteId: string,
+  published: SiteDocument,
+): Promise<void> {
+  try {
+    // A row can only be read after it was written, so the `createdAt` bound
+    // is defensive; `lte` keeps a generation that landed in the same
+    // millisecond as the publish.
+    const generation = await prisma.aiGeneration.findFirst({
+      where: {
+        siteId,
+        kind: "site",
+        status: "applied",
+        createdAt: { lte: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, output: true },
+    });
+    if (!generation) return;
+
+    const credited = await prisma.eventLog.findMany({
+      where: { siteId, type: { in: [...AI_OUTCOME_EVENTS] } },
+      select: { data: true },
+    });
+    if (credited.some((row) => readGenerationId(row.data) === generation.id)) return;
+
+    // An unattributable publish beats a guessed metric: `output` is a string
+    // column that may predate the current schema revision.
+    const proposal = safeParseSiteDocument(readStoredDocument(generation.output));
+    if (!proposal) return;
+
+    const diff = diffDocuments(proposal, published);
+    await logEvent({
+      userId,
+      siteId,
+      type: isUnchanged(diff) ? "ai_proposal_kept_verified" : "ai_proposal_edited",
+      data: { generationId: generation.id, ...diff },
+    });
+  } catch {
+    // Intentionally silent — see the note above.
+  }
+}
+
 /* ----------------------------------------------------- publish & rollback */
 
 /**
@@ -162,6 +255,10 @@ export async function saveDraft(siteId: string, document: unknown): Promise<Stor
  * transaction — an important operation without its audit row must not
  * commit (constitution III.3); `@@unique([siteId, number])` backstops the
  * monotonic numbering against a concurrent publish.
+ *
+ * Once the snapshot is safely committed, `recordAiProposalOutcome` measures
+ * the published document against the AI proposal that seeded it. That step is
+ * outside the transaction and cannot fail the publish.
  */
 export async function publishSite(siteId: string, note?: string): Promise<PublishResult> {
   const { user, site } = await requireSiteAccess(siteId);
@@ -210,6 +307,10 @@ export async function publishSite(siteId: string, note?: string): Promise<Publis
     });
     return number;
   });
+
+  // Post-commit and non-fatal by construction: the version is already frozen,
+  // and this only measures how much of it the model wrote.
+  await recordAiProposalOutcome(user.id, site.id, draft);
 
   return { ok: true, versionNumber };
 }
